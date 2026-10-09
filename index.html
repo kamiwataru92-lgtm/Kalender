@@ -96,7 +96,55 @@
       font-size: 12px;
       margin: 30px 0;
     }
+        .timetable {
+      background: white;
+      padding: 16px;
+      border-radius: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 3px 12px #00000008;
+    }
+
+    .timetable-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .timetable table {
+      width: 100%;
+      min-width: 520px;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    .timetable th,
+    .timetable td {
+      border: 1px solid #dce1eb;
+      padding: 10px 6px;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .timetable th {
+      background: #f0f3fa;
+    }
+
+    .timetable td {
+      height: 65px;
+    }
+
+    .timetable td.has-lesson {
+      background: #e8edff;
+      color: #243da0;
+      font-weight: bold;
+    }
+
+    .timetable .period-label {
+      white-space: nowrap;
+      font-weight: bold;
+      background: #f8f9fc;
+    }
   </style>
+  
 </head>
 
 <body>
@@ -326,6 +374,59 @@
 
       nameInput.focus();
     }
+    function renderTimetable() {
+  const tbody = document.getElementById("timetableBody");
+  tbody.replaceChildren();
+
+  const dayNames = [
+    "月曜日",
+    "火曜日",
+    "水曜日",
+    "木曜日",
+    "金曜日",
+    "土曜日",
+    "日曜日"
+  ];
+
+  const cells = {};
+
+  // 1限から7限までの行を作る
+  for (let period = 1; period <= 7; period++) {
+    const tr = document.createElement("tr");
+
+    const label = document.createElement("td");
+    label.className = "period-label";
+    label.textContent = `${period}限`;
+    tr.appendChild(label);
+
+    // 各曜日のセルを作る
+    dayNames.forEach(day => {
+      const td = document.createElement("td");
+      const key = `${day}-${period}`;
+
+      cells[key] = td;
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  }
+
+  // 登録済みの授業を時間割に表示する
+  lessons.forEach(lesson => {
+    if (!lesson.day || !lesson.period) return;
+
+    const cell = cells[`${lesson.day}-${lesson.period}`];
+    if (!cell) return;
+
+    if (cell.textContent) {
+      cell.textContent += " / " + lesson.name;
+    } else {
+      cell.textContent = lesson.name;
+    }
+
+    cell.classList.add("has-lesson");
+  });
+}
 
     function render() {
       const records = getRecordsForDate();
