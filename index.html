@@ -552,6 +552,7 @@
 
       document.getElementById("summaryText").textContent =
         `出席・遅刻：${attended}　欠席：${absent}　未記録：${unrecorded}`;
+    renderTimetable();
     }
 
     lessonForm.addEventListener("submit", event => {
