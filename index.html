@@ -496,15 +496,65 @@
 
 		// 授業ごとの累計出席率を計算して表示する
 		function renderAttendanceRates() {
-  		const root = document.getElementById("attendanceRates");
+  		// 授業ごとの累計出席率を計算して表示する
+function renderAttendanceRates() {
+  const root = document.getElementById("attendanceRates");
+  if (!root) return;
 
-  		if (!root) return;
+  root.replaceChildren();
 
-  		root.replaceChildren();
+  if (lessons.length === 0) {
+    root.textContent = "授業を登録してください。";
+    return;
+  }
 
-  		if (lessons.length === 0) {
-    		root.textContent = "授業を登録してください。";
-    		return;
+  const allRecords = getAllRecords();
+  const selectedDate = new Date(dateInput.value + "T12:00:00");
+  const semesterStart = new Date("2026-09-25T12:00:00");
+  const semesterEnd = new Date("2027-01-08T12:00:00");
+
+  lessons.forEach(lesson => {
+    let attended = 0;
+    let absent = 0;
+    let late = 0;
+
+    Object.entries(allRecords).forEach(([date, dayRecords]) => {
+      const classDate = new Date(date + "T12:00:00");
+
+      // 学期開始前・選択日より後の記録は無視する
+      if (classDate < semesterStart || classDate > selectedDate) {
+        return;
+      }
+
+      // 冬休み中の記録は無視する
+      if (date >= "2026-12-26" && date <= "2027-01-03") {
+        return;
+      }
+
+      const status = dayRecords[lesson.id];
+
+      if (status === "出席") attended++;
+      if (status === "欠席") absent++;
+      if (status === "遅刻") late++;
+    });
+
+    const total = attended + absent + late;
+    const attendanceCount = attended + late;
+
+    const rate = total > 0
+      ? Math.floor(attendanceCount / total * 100)
+      : null;
+
+    const p = document.createElement("p");
+    p.style.margin = "8px 0";
+
+    p.textContent = total > 0
+      ? `${lesson.name}：出席 ${attended}回・遅刻 ${late}回・欠席 ${absent}回｜出席率 ${rate}%`
+      : `${lesson.name}：まだ記録がありません`;
+
+    root.appendChild(p);
+  });
+}
   		}
 
   		const allRecords = getAllRecords();
