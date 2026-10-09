@@ -429,12 +429,13 @@
 
       const today = new Date();
       const todayName = dayNames[today.getDay()];
-console.log("今日の曜日:", todayName);
-console.log("登録されている授業:", lessons.map(lesson => ({
-  name: lesson.name,
-  day: lesson.day,
-  period: lesson.period
-})));
+      
+      console.log("今日の曜日:", todayName);
+      console.log("登録されている授業:", lessons.map(lesson => ({
+        name: lesson.name,
+        day: lesson.day,
+        period: lesson.period
+      })));
 
       // 見出しを作る
       const periodHeader = document.createElement("th");
