@@ -2,9 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f7fb">
-  <title>出席ノート</title>
+  <title>Kalender - 出席管理</title>
 
   <style>
     * {
@@ -19,7 +19,7 @@
       font-family: sans-serif;
     }
 
-    header {
+    header, main, .summary {
       max-width: 600px;
       margin: 20px auto;
     }
@@ -28,33 +28,32 @@
       margin-bottom: 8px;
     }
 
-    .description {
+    .description, .status {
       color: #687386;
       font-size: 14px;
     }
 
-    #classes {
-      max-width: 600px;
-      margin: auto;
-    }
-
-    .card {
+    .date-picker, .summary, .card {
       background: white;
       padding: 18px;
-      margin-bottom: 14px;
       border-radius: 14px;
+      margin-bottom: 14px;
       box-shadow: 0 3px 12px #00000008;
+    }
+
+    input[type="date"] {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      border: 1px solid #dce1eb;
+      border-radius: 9px;
+      font-size: 16px;
     }
 
     .card h2 {
       font-size: 18px;
       margin-top: 0;
-    }
-
-    .status {
-      color: #687386;
-      font-size: 14px;
-      margin-bottom: 14px;
     }
 
     .buttons {
@@ -78,10 +77,8 @@
       border-color: #3659d9;
     }
 
-    .reset {
-      display: block;
-      margin: 20px auto;
-      color: #687386;
+    .summary p {
+      margin: 6px 0;
     }
 
     footer {
@@ -94,46 +91,50 @@
 </head>
 
 <body>
-
   <header>
-    <h1>📚 出席ノート</h1>
+    <h1>📚 Kalender</h1>
     <p class="description">
-      今日の授業の出席状況を記録しよう。
+      日付ごとに大学の出席状況を記録しよう。
     </p>
-    <p id="today"></p>
   </header>
 
-  <main id="classes"></main>
+  <main>
+    <section class="date-picker">
+      <label for="recordDate">記録する日付</label>
+      <input type="date" id="recordDate">
+    </section>
 
-  <button class="reset" onclick="resetRecords()">
-    今日の記録をリセット
-  </button>
+    <section class="summary">
+      <h2>今日の記録</h2>
+      <p id="summaryText">読み込み中...</p>
+    </section>
 
-  <footer>
-    出席ノート · 開発中
-  </footer>
+    <section id="classes"></section>
+  </main>
+
+  <footer>Kalender · 出席管理</footer>
 
   <script>
-    // サンプルの授業一覧
     const lessons = [
       { id: 1, name: "国際経済学" },
       { id: 2, name: "経済政策論" },
       { id: 3, name: "情報リテラシー" }
     ];
 
-    const storageKey = "attendance-records";
+    const storageKey = "kalender-attendance-v2";
+    const dateInput = document.getElementById("recordDate");
 
-    // 今日の日付を表示
-    document.getElementById("today").textContent =
-      new Date().toLocaleDateString("ja-JP", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        weekday: "long"
-      });
+    function localDateString(date = new Date()) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
 
-    // 保存した記録を読み込む
-    function getRecords() {
+      return `${year}-${month}-${day}`;
+    }
+
+    dateInput.value = localDateString();
+
+    function getAllRecords() {
       try {
         return JSON.parse(
           localStorage.getItem(storageKey) || "{}"
@@ -143,27 +144,39 @@
       }
     }
 
-    // 出席状況を保存する
-    function saveRecord(id, status) {
-      const records = getRecords();
+    function getRecordsForDate() {
+      const allRecords = getAllRecords();
+      return allRecords[dateInput.value] || {};
+    }
+
+    function saveRecord(lessonId, status) {
+      const allRecords = getAllRecords();
+      const date = dateInput.value;
+
+      if (!allRecords[date]) {
+        allRecords[date] = {};
+      }
 
       if (status === "") {
-        delete records[id];
+        delete allRecords[date][lessonId];
       } else {
-        records[id] = status;
+        allRecords[date][lessonId] = status;
+      }
+
+      if (Object.keys(allRecords[date]).length === 0) {
+        delete allRecords[date];
       }
 
       localStorage.setItem(
         storageKey,
-        JSON.stringify(records)
+        JSON.stringify(allRecords)
       );
 
       render();
     }
 
-    // 授業一覧を画面に表示する
     function render() {
-      const records = getRecords();
+      const records = getRecordsForDate();
       const root = document.getElementById("classes");
 
       root.replaceChildren();
@@ -179,9 +192,7 @@
 
         const status = document.createElement("p");
         status.className = "status";
-        status.textContent =
-          "現在の記録：" +
-          (current || "未記録");
+        status.textContent = "記録：" + (current || "未記録");
 
         const buttons = document.createElement("div");
         buttons.className = "buttons";
@@ -197,7 +208,7 @@
           const button = document.createElement("button");
           button.textContent = label;
 
-          if (current === value && value !== "") {
+          if (value !== "" && current === value) {
             button.className = "selected";
           }
 
@@ -211,18 +222,23 @@
         card.append(title, status, buttons);
         root.appendChild(card);
       });
+
+      const values = Object.values(records);
+      const attended = values.filter(
+        value => value === "出席" || value === "遅刻"
+      ).length;
+      const absent = values.filter(
+        value => value === "欠席"
+      ).length;
+      const unrecorded = lessons.length - values.length;
+
+      document.getElementById("summaryText").textContent =
+        `出席・遅刻：${attended}　欠席：${absent}　未記録：${unrecorded}`;
     }
 
-    // 記録をすべて消す
-    function resetRecords() {
-      if (confirm("今日の記録をすべて消しますか？")) {
-        localStorage.removeItem(storageKey);
-        render();
-      }
-    }
+    dateInput.addEventListener("change", render);
 
     render();
   </script>
-
 </body>
 </html>
