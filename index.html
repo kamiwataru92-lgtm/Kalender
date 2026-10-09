@@ -494,6 +494,61 @@
       });
     }
 
+		// 授業ごとの累計出席率を計算して表示する
+		function renderAttendanceRates() {
+  		const root = document.getElementById("attendanceRates");
+
+  		if (!root) return;
+
+  		root.replaceChildren();
+
+  		if (lessons.length === 0) {
+    		root.textContent = "授業を登録してください。";
+    		return;
+  		}
+
+  		const allRecords = getAllRecords();
+
+ 			lessons.forEach(lesson => {
+    		let attended = 0;
+		    let absent = 0;
+  		  let late = 0;
+
+    		Object.values(allRecords).forEach(dayRecords => {
+      		const status = dayRecords[lesson.id];
+
+      		if (status === "出席") {
+        		attended++;
+      		} else if (status === "欠席") {
+        		absent++;
+      		} else if (status === "遅刻") {
+        		late++;
+      		}
+    		});
+
+    		const total = attended + absent + late;
+    		const attendanceCount = attended + late;
+
+    		const rate = total > 0
+      		? Math.floor(attendanceCount / total * 100)
+      		: null;
+
+    		const p = document.createElement("p");
+
+    		p.style.margin = "8px 0";
+
+    		if (total > 0) {
+      		p.textContent =
+      		  `${lesson.name}：出席 ${attended}回・遅刻 ${late}回・欠席 ${absent}回｜出席率 ${rate}%`;
+    		} else {
+      		p.textContent =
+      		  `${lesson.name}：まだ記録がありません`;
+    		}
+
+    		root.appendChild(p);
+  		});
+		}
+
     // 出席管理画面を更新する
     function render() {
       const records = getRecordsForDate();
@@ -638,11 +693,11 @@
       );
 
       document.getElementById("summaryText").textContent =
-        `出席・遅刻：${attended}　欠席：${absent}　未記録：${unrecorded}`;
+  		`出席・遅刻：${attended}　欠席：${absent}　未記録：${unrecorded}`;
 
-      // 時間割も更新する
-      renderTimetable();
-    }
+		renderAttendanceRates();
+		renderTimetable();
+  		  }
 
     // 授業の追加・編集を保存する
     lessonForm.addEventListener("submit", event => {
