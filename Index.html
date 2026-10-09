@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>出席ノート</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #f5f7fb;
+      color: #20283a;
+      font-family: sans-serif;
+    }
+
+    header {
+      max-width: 600px;
+      margin: 20px auto;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    .description {
+      color: #687386;
+      font-size: 14px;
+    }
+
+    #classes {
+      max-width: 600px;
+      margin: auto;
+    }
+
+    .card {
+      background: white;
+      padding: 18px;
+      margin-bottom: 14px;
+      border-radius: 14px;
+      box-shadow: 0 3px 12px #00000008;
+    }
+
+    .card h2 {
+      font-size: 18px;
+      margin-top: 0;
+    }
+
+    .status {
+      color: #687386;
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      border: 1px solid #dce1eb;
+      border-radius: 9px;
+      padding: 10px 13px;
+      background: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button.selected {
+      background: #3659d9;
+      color: white;
+      border-color: #3659d9;
+    }
+
+    .reset {
+      display: block;
+      margin: 20px auto;
+      color: #687386;
+    }
+
+    footer {
+      text-align: center;
+      color: #687386;
+      font-size: 12px;
+      margin: 30px 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>📚 出席ノート</h1>
+    <p class="description">
+      今日の授業の出席状況を記録しよう。
+    </p>
+    <p id="today"></p>
+  </header>
+
+  <main id="classes"></main>
+
+  <button class="reset" onclick="resetRecords()">
+    今日の記録をリセット
+  </button>
+
+  <footer>
+    出席ノート · 開発中
+  </footer>
+
+  <script>
+    // サンプルの授業一覧
+    const lessons = [
+      { id: 1, name: "国際経済学" },
+      { id: 2, name: "経済政策論" },
+      { id: 3, name: "情報リテラシー" }
+    ];
+
+    const storageKey = "attendance-records";
+
+    // 今日の日付を表示
+    document.getElementById("today").textContent =
+      new Date().toLocaleDateString("ja-JP", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        weekday: "long"
+      });
+
+    // 保存した記録を読み込む
+    function getRecords() {
+      try {
+        return JSON.parse(
+          localStorage.getItem(storageKey) || "{}"
+        );
+      } catch {
+        return {};
+      }
+    }
+
+    // 出席状況を保存する
+    function saveRecord(id, status) {
+      const records = getRecords();
+
+      if (status === "") {
+        delete records[id];
+      } else {
+        records[id] = status;
+      }
+
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify(records)
+      );
+
+      render();
+    }
+
+    // 授業一覧を画面に表示する
+    function render() {
+      const records = getRecords();
+      const root = document.getElementById("classes");
+
+      root.replaceChildren();
+
+      lessons.forEach(lesson => {
+        const current = records[lesson.id] || "";
+
+        const card = document.createElement("section");
+        card.className = "card";
+
+        const title = document.createElement("h2");
+        title.textContent = lesson.name;
+
+        const status = document.createElement("p");
+        status.className = "status";
+        status.textContent =
+          "現在の記録：" +
+          (current || "未記録");
+
+        const buttons = document.createElement("div");
+        buttons.className = "buttons";
+
+        const options = [
+          ["出席", "出席"],
+          ["欠席", "欠席"],
+          ["遅刻", "遅刻"],
+          ["取り消し", ""]
+        ];
+
+        options.forEach(([label, value]) => {
+          const button = document.createElement("button");
+          button.textContent = label;
+
+          if (current === value && value !== "") {
+            button.className = "selected";
+          }
+
+          button.addEventListener("click", () => {
+            saveRecord(lesson.id, value);
+          });
+
+          buttons.appendChild(button);
+        });
+
+        card.append(title, status, buttons);
+        root.appendChild(card);
+      });
+    }
+
+    // 記録をすべて消す
+    function resetRecords() {
+      if (confirm("今日の記録をすべて消しますか？")) {
+        localStorage.removeItem(storageKey);
+        render();
+      }
+    }
+
+    render();
+  </script>
+
+</body>
+</html>
