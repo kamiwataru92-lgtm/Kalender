@@ -7,7 +7,9 @@
   <title>Kalender - 出席管理</title>
 
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -17,21 +19,31 @@
       font-family: sans-serif;
     }
 
-    header, main {
+    header,
+    main {
       max-width: 600px;
       margin: 20px auto;
     }
 
-    h1 { margin-bottom: 8px; }
+    h1 {
+      margin-bottom: 8px;
+    }
 
-    h2 { font-size: 18px; }
+    h2 {
+      font-size: 18px;
+    }
 
-    .description, .status, .lesson-time {
+    .description,
+    .status,
+    .lesson-time {
       color: #687386;
       font-size: 14px;
     }
 
-    .date-picker, .summary, .card, .editor {
+    .date-picker,
+    .summary,
+    .card,
+    .editor {
       background: white;
       padding: 18px;
       border-radius: 14px;
@@ -39,7 +51,8 @@
       box-shadow: 0 3px 12px #00000008;
     }
 
-    input, select {
+    input,
+    select {
       display: block;
       width: 100%;
       margin-top: 6px;
@@ -76,19 +89,28 @@
       cursor: pointer;
     }
 
-    button.selected, button.primary {
+    button.selected,
+    button.primary {
       background: #3659d9;
       color: white;
       border-color: #3659d9;
     }
 
-    button.danger { color: #b42318; }
+    button.danger {
+      color: #b42318;
+    }
 
-    .summary p { margin: 6px 0; }
+    .summary p {
+      margin: 6px 0;
+    }
 
-    .editor h2 { margin-top: 0; }
+    .editor h2 {
+      margin-top: 0;
+    }
 
-    .hidden { display: none; }
+    .hidden {
+      display: none;
+    }
 
     footer {
       text-align: center;
@@ -96,7 +118,8 @@
       font-size: 12px;
       margin: 30px 0;
     }
-        .timetable {
+
+    .timetable {
       background: white;
       padding: 16px;
       border-radius: 14px;
@@ -111,9 +134,10 @@
 
     .timetable table {
       width: 100%;
-      min-width: 520px;
+      min-width: 0;
       border-collapse: collapse;
       text-align: center;
+      table-layout: fixed;
     }
 
     .timetable th,
@@ -139,12 +163,12 @@
     }
 
     .timetable .period-label {
+      width: 65px;
       white-space: nowrap;
       font-weight: bold;
       background: #f8f9fc;
     }
   </style>
-  
 </head>
 
 <body>
@@ -169,21 +193,21 @@
     <section id="classes"></section>
 
     <section class="timetable">
-  <h2>📅 時間割</h2>
+      <h2>📅 今日の時間割</h2>
 
-  <div class="timetable-scroll">
-    <table>
-      <thead>
-  <tr id="timetableHeader">
-    <th>時限</th>
-    <th>今日</th>
-  </tr>
-</thead>
+      <div class="timetable-scroll">
+        <table>
+          <thead>
+            <tr id="timetableHeader">
+              <th>時限</th>
+              <th>今日</th>
+            </tr>
+          </thead>
 
-      <tbody id="timetableBody"></tbody>
-    </table>
-  </div>
-</section>
+          <tbody id="timetableBody"></tbody>
+        </table>
+      </div>
+    </section>
 
     <section class="editor">
       <h2 id="formHeading">授業を追加</h2>
@@ -262,6 +286,7 @@
 
     let editingLessonId = null;
 
+    // 授業データを読み込む
     function loadLessons() {
       try {
         const saved = JSON.parse(
@@ -271,7 +296,9 @@
         if (Array.isArray(saved)) {
           return saved;
         }
-      } catch (error) {}
+      } catch (error) {
+        console.error("授業データの読み込みに失敗しました", error);
+      }
 
       localStorage.setItem(
         lessonsStorageKey,
@@ -283,6 +310,7 @@
 
     let lessons = loadLessons();
 
+    // 授業データを保存する
     function saveLessons() {
       localStorage.setItem(
         lessonsStorageKey,
@@ -290,6 +318,7 @@
       );
     }
 
+    // 今日の日付を YYYY-MM-DD 形式にする
     function localDateString(date = new Date()) {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -300,21 +329,25 @@
 
     dateInput.value = localDateString();
 
+    // 保存済みの出席記録をすべて取得する
     function getAllRecords() {
       try {
         return JSON.parse(
           localStorage.getItem(attendanceStorageKey) || "{}"
         );
       } catch (error) {
+        console.error("出席記録の読み込みに失敗しました", error);
         return {};
       }
     }
 
+    // 選択中の日付の出席記録を取得する
     function getRecordsForDate() {
       const allRecords = getAllRecords();
       return allRecords[dateInput.value] || {};
     }
 
+    // 出席状況を保存する
     function saveRecord(lessonId, status) {
       const allRecords = getAllRecords();
       const date = dateInput.value;
@@ -341,6 +374,7 @@
       render();
     }
 
+    // 授業フォームを初期状態に戻す
     function resetLessonForm() {
       editingLessonId = null;
       lessonForm.reset();
@@ -350,6 +384,7 @@
       cancelEditButton.classList.add("hidden");
     }
 
+    // 授業の編集を開始する
     function startEditingLesson(lesson) {
       editingLessonId = lesson.id;
 
@@ -368,60 +403,84 @@
 
       nameInput.focus();
     }
+
+    // 今日の曜日だけを表示する時間割
     function renderTimetable() {
-  const tbody = document.getElementById("timetableBody");
-  tbody.replaceChildren();
+      const tbody = document.getElementById("timetableBody");
+      const header = document.getElementById("timetableHeader");
 
-  const dayNames = [
-    "月曜日",
-    "火曜日",
-    "水曜日",
-    "木曜日",
-    "金曜日",
-    "土曜日",
-    "日曜日"
-  ];
+      if (!tbody || !header) {
+        return;
+      }
 
-  const cells = {};
+      tbody.replaceChildren();
+      header.replaceChildren();
 
-  // 1限から7限までの行を作る
-  for (let period = 1; period <= 7; period++) {
-    const tr = document.createElement("tr");
+      // JavaScriptの曜日番号は日曜日が0、月曜日が1
+      const dayNames = [
+        "日曜日",
+        "月曜日",
+        "火曜日",
+        "水曜日",
+        "木曜日",
+        "金曜日",
+        "土曜日"
+      ];
 
-    const label = document.createElement("td");
-    label.className = "period-label";
-    label.textContent = `${period}限`;
-    tr.appendChild(label);
+      const today = new Date();
+      const todayName = dayNames[today.getDay()];
 
-    // 各曜日のセルを作る
-    dayNames.forEach(day => {
-      const td = document.createElement("td");
-      const key = `${day}-${period}`;
+      // 見出しを作る
+      const periodHeader = document.createElement("th");
+      periodHeader.textContent = "時限";
+      header.appendChild(periodHeader);
 
-      cells[key] = td;
-      tr.appendChild(td);
-    });
+      const todayHeader = document.createElement("th");
+      todayHeader.textContent = todayName;
+      header.appendChild(todayHeader);
 
-    tbody.appendChild(tr);
-  }
+      // 1限から7限までの行を作る
+      for (let period = 1; period <= 7; period++) {
+        const tr = document.createElement("tr");
 
-  // 登録済みの授業を時間割に表示する
-  lessons.forEach(lesson => {
-    if (!lesson.day || !lesson.period) return;
+        const label = document.createElement("td");
+        label.className = "period-label";
+        label.textContent = `${period}限`;
 
-    const cell = cells[`${lesson.day}-${lesson.period}`];
-    if (!cell) return;
+        const cell = document.createElement("td");
+        cell.id = `today-period-${period}`;
 
-    if (cell.textContent) {
-      cell.textContent += " / " + lesson.name;
-    } else {
-      cell.textContent = lesson.name;
+        tr.appendChild(label);
+        tr.appendChild(cell);
+
+        tbody.appendChild(tr);
+      }
+
+      // 今日の曜日に該当する授業だけを表示する
+      lessons.forEach(lesson => {
+        if (lesson.day !== todayName || !lesson.period) {
+          return;
+        }
+
+        const cell = document.getElementById(
+          `today-period-${lesson.period}`
+        );
+
+        if (!cell) {
+          return;
+        }
+
+        if (cell.textContent) {
+          cell.textContent += " / " + lesson.name;
+        } else {
+          cell.textContent = lesson.name;
+        }
+
+        cell.classList.add("has-lesson");
+      });
     }
 
-    cell.classList.add("has-lesson");
-  });
-}
-
+    // 出席管理画面を更新する
     function render() {
       const records = getRecordsForDate();
       const root = document.getElementById("classes");
@@ -435,6 +494,7 @@
       document.getElementById("summaryHeading").textContent =
         `${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日の記録`;
 
+      // 登録済みの授業ごとにカードを作る
       lessons.forEach(lesson => {
         const current = records[lesson.id] || "";
 
@@ -479,6 +539,7 @@
           attendanceButtons.appendChild(button);
         });
 
+        // 編集・削除ボタン
         const editButtons = document.createElement("div");
         editButtons.className = "buttons";
         editButtons.style.marginTop = "12px";
@@ -499,7 +560,9 @@
             `「${lesson.name}」を削除しますか？\nこの授業は一覧から消えます。`
           );
 
-          if (!confirmed) return;
+          if (!confirmed) {
+            return;
+          }
 
           lessons = lessons.filter(
             item => item.id !== lesson.id
@@ -527,6 +590,7 @@
         root.appendChild(card);
       });
 
+      // 出席状況を集計する
       const values = Object.values(records).filter(
         value => ["出席", "欠席", "遅刻"].includes(value)
       );
@@ -546,9 +610,12 @@
 
       document.getElementById("summaryText").textContent =
         `出席・遅刻：${attended}　欠席：${absent}　未記録：${unrecorded}`;
-    renderTimetable();
+
+      // 時間割も更新する
+      renderTimetable();
     }
 
+    // 授業の追加・編集を保存する
     lessonForm.addEventListener("submit", event => {
       event.preventDefault();
 
@@ -560,6 +627,7 @@
       }
 
       if (editingLessonId !== null) {
+        // 既存の授業を編集する
         lessons = lessons.map(lesson =>
           lesson.id === editingLessonId
             ? {
@@ -571,6 +639,7 @@
             : lesson
         );
       } else {
+        // 新しい授業を追加する
         const newId = lessons.reduce(
           (max, lesson) =>
             Math.max(max, Number(lesson.id) || 0),
@@ -590,13 +659,16 @@
       render();
     });
 
+    // 編集をキャンセルする
     cancelEditButton.addEventListener(
       "click",
       resetLessonForm
     );
 
+    // 記録する日付が変更されたら画面を更新する
     dateInput.addEventListener("change", render);
 
+    // 最初の画面を表示する
     render();
   </script>
 </body>
