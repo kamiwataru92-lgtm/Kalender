@@ -554,48 +554,6 @@ function renderAttendanceRates() {
   });
 }
 
-  		const allRecords = getAllRecords();
-
- 			lessons.forEach(lesson => {
-    		let attended = 0;
-		    let absent = 0;
-  		  let late = 0;
-
-    		Object.values(allRecords).forEach(dayRecords => {
-      		const status = dayRecords[lesson.id];
-
-      		if (status === "出席") {
-        		attended++;
-      		} else if (status === "欠席") {
-        		absent++;
-      		} else if (status === "遅刻") {
-        		late++;
-      		}
-    		});
-
-    		const total = attended + absent + late;
-    		const attendanceCount = attended + late;
-
-    		const rate = total > 0
-      		? Math.floor(attendanceCount / total * 100)
-      		: null;
-
-    		const p = document.createElement("p");
-
-    		p.style.margin = "8px 0";
-
-    		if (total > 0) {
-      		p.textContent =
-      		  `${lesson.name}：出席 ${attended}回・遅刻 ${late}回・欠席 ${absent}回｜出席率 ${rate}%`;
-    		} else {
-      		p.textContent =
-      		  `${lesson.name}：まだ記録がありません`;
-    		}
-
-    		root.appendChild(p);
-  		});
-		}
-
     // 出席管理画面を更新する
     function render() {
       const records = getRecordsForDate();
