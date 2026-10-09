@@ -501,24 +501,24 @@
       document.getElementById("summaryHeading").textContent =
         `${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日の記録`;
 
-      // 今日の曜日を取得する
+      // 選択した日付の曜日を取得する
 			const dayNames = [
-		  	"日曜日",
-			  "月曜日",
-				"火曜日",
-				"水曜日",
-			  "木曜日",
-			  "金曜日",
- 			 "土曜日"
+  			"日曜日",
+  			"月曜日",
+  			"火曜日",
+  			"水曜日",
+  			"木曜日",
+  			"金曜日",
+  			"土曜日"
 			];
 
-			const todayName = dayNames[new Date().getDay()];
+			const selectedDay = dayNames[selectedDate.getDay()];
 
-			// 今日の曜日に該当する授業だけ表示する
+			// 選択した曜日の授業だけ表示する
 			lessons
- 			 .filter(lesson => lesson.day === todayName)
-  		 .forEach(lesson => {
-   			  const current = records[lesson.id] || "";
+  			.filter(lesson => lesson.day === selectedDay)
+  			.forEach(lesson => {
+    			const current = records[lesson.id] || "";
 
     	  const card = document.createElement("section");
     	  card.className = "card";
