@@ -7,9 +7,7 @@
   <title>Kalender - 出席管理</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -19,21 +17,21 @@
       font-family: sans-serif;
     }
 
-    header, main, .summary {
+    header, main {
       max-width: 600px;
       margin: 20px auto;
     }
 
-    h1 {
-      margin-bottom: 8px;
-    }
+    h1 { margin-bottom: 8px; }
 
-    .description, .status {
+    h2 { font-size: 18px; }
+
+    .description, .status, .lesson-time {
       color: #687386;
       font-size: 14px;
     }
 
-    .date-picker, .summary, .card {
+    .date-picker, .summary, .card, .editor {
       background: white;
       padding: 18px;
       border-radius: 14px;
@@ -41,19 +39,26 @@
       box-shadow: 0 3px 12px #00000008;
     }
 
-    input[type="date"] {
+    input, select {
       display: block;
       width: 100%;
-      margin-top: 10px;
+      margin-top: 6px;
+      margin-bottom: 14px;
       padding: 12px;
       border: 1px solid #dce1eb;
       border-radius: 9px;
       font-size: 16px;
+      background: white;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
     }
 
     .card h2 {
-      font-size: 18px;
       margin-top: 0;
+      margin-bottom: 6px;
     }
 
     .buttons {
@@ -71,15 +76,19 @@
       cursor: pointer;
     }
 
-    button.selected {
+    button.selected, button.primary {
       background: #3659d9;
       color: white;
       border-color: #3659d9;
     }
 
-    .summary p {
-      margin: 6px 0;
-    }
+    button.danger { color: #b42318; }
+
+    .summary p { margin: 6px 0; }
+
+    .editor h2 { margin-top: 0; }
+
+    .hidden { display: none; }
 
     footer {
       text-align: center;
@@ -105,24 +114,116 @@
     </section>
 
     <section class="summary">
-      <h2>今日の記録</h2>
+      <h2 id="summaryHeading">今日の記録</h2>
       <p id="summaryText">読み込み中...</p>
     </section>
 
     <section id="classes"></section>
+
+    <section class="editor">
+      <h2 id="formHeading">授業を追加</h2>
+
+      <form id="lessonForm">
+        <label for="lessonName">授業名</label>
+        <input
+          id="lessonName"
+          type="text"
+          maxlength="80"
+          placeholder="例：国際経済学"
+          required
+        >
+
+        <label for="lessonDay">曜日</label>
+        <select id="lessonDay">
+          <option value="">曜日を選択（任意）</option>
+          <option value="月曜日">月曜日</option>
+          <option value="火曜日">火曜日</option>
+          <option value="水曜日">水曜日</option>
+          <option value="木曜日">木曜日</option>
+          <option value="金曜日">金曜日</option>
+          <option value="土曜日">土曜日</option>
+          <option value="日曜日">日曜日</option>
+        </select>
+
+        <label for="lessonPeriod">時限</label>
+        <select id="lessonPeriod">
+          <option value="">時限を選択（任意）</option>
+          <option value="1">1限</option>
+          <option value="2">2限</option>
+          <option value="3">3限</option>
+          <option value="4">4限</option>
+          <option value="5">5限</option>
+          <option value="6">6限</option>
+          <option value="7">7限</option>
+        </select>
+
+        <div class="buttons">
+          <button
+            class="primary"
+            type="submit"
+            id="saveLessonButton"
+          >授業を追加</button>
+
+          <button
+            type="button"
+            id="cancelEditButton"
+            class="hidden"
+          >編集をキャンセル</button>
+        </div>
+      </form>
+    </section>
   </main>
 
   <footer>Kalender · 出席管理</footer>
 
   <script>
-    const lessons = [
-      { id: 1, name: "国際経済学" },
-      { id: 2, name: "経済政策論" },
-      { id: 3, name: "情報リテラシー" }
+    const defaultLessons = [
+      { id: 1, name: "国際経済学", day: "", period: "" },
+      { id: 2, name: "経済政策論", day: "", period: "" },
+      { id: 3, name: "情報リテラシー", day: "", period: "" }
     ];
 
-    const storageKey = "kalender-attendance-v2";
+    const attendanceStorageKey = "kalender-attendance-v2";
+    const lessonsStorageKey = "kalender-lessons-v1";
+
     const dateInput = document.getElementById("recordDate");
+    const lessonForm = document.getElementById("lessonForm");
+    const nameInput = document.getElementById("lessonName");
+    const dayInput = document.getElementById("lessonDay");
+    const periodInput = document.getElementById("lessonPeriod");
+    const formHeading = document.getElementById("formHeading");
+    const saveLessonButton = document.getElementById("saveLessonButton");
+    const cancelEditButton = document.getElementById("cancelEditButton");
+
+    let editingLessonId = null;
+
+    function loadLessons() {
+      try {
+        const saved = JSON.parse(
+          localStorage.getItem(lessonsStorageKey) || "null"
+        );
+
+        if (Array.isArray(saved)) {
+          return saved;
+        }
+      } catch (error) {}
+
+      localStorage.setItem(
+        lessonsStorageKey,
+        JSON.stringify(defaultLessons)
+      );
+
+      return defaultLessons.map(lesson => ({ ...lesson }));
+    }
+
+    let lessons = loadLessons();
+
+    function saveLessons() {
+      localStorage.setItem(
+        lessonsStorageKey,
+        JSON.stringify(lessons)
+      );
+    }
 
     function localDateString(date = new Date()) {
       const year = date.getFullYear();
@@ -137,9 +238,9 @@
     function getAllRecords() {
       try {
         return JSON.parse(
-          localStorage.getItem(storageKey) || "{}"
+          localStorage.getItem(attendanceStorageKey) || "{}"
         );
-      } catch {
+      } catch (error) {
         return {};
       }
     }
@@ -168,11 +269,39 @@
       }
 
       localStorage.setItem(
-        storageKey,
+        attendanceStorageKey,
         JSON.stringify(allRecords)
       );
 
       render();
+    }
+
+    function resetLessonForm() {
+      editingLessonId = null;
+      lessonForm.reset();
+
+      formHeading.textContent = "授業を追加";
+      saveLessonButton.textContent = "授業を追加";
+      cancelEditButton.classList.add("hidden");
+    }
+
+    function startEditingLesson(lesson) {
+      editingLessonId = lesson.id;
+
+      nameInput.value = lesson.name;
+      dayInput.value = lesson.day || "";
+      periodInput.value = lesson.period || "";
+
+      formHeading.textContent = "授業を編集";
+      saveLessonButton.textContent = "変更を保存";
+      cancelEditButton.classList.remove("hidden");
+
+      document.querySelector(".editor").scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+
+      nameInput.focus();
     }
 
     function render() {
@@ -180,6 +309,13 @@
       const root = document.getElementById("classes");
 
       root.replaceChildren();
+
+      const selectedDate = new Date(
+        dateInput.value + "T12:00:00"
+      );
+
+      document.getElementById("summaryHeading").textContent =
+        `${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日の記録`;
 
       lessons.forEach(lesson => {
         const current = records[lesson.id] || "";
@@ -190,21 +326,27 @@
         const title = document.createElement("h2");
         title.textContent = lesson.name;
 
+        const time = document.createElement("p");
+        time.className = "lesson-time";
+
+        time.textContent = [
+          lesson.day || "曜日未設定",
+          lesson.period ? lesson.period + "限" : "時限未設定"
+        ].join("・");
+
         const status = document.createElement("p");
         status.className = "status";
         status.textContent = "記録：" + (current || "未記録");
 
-        const buttons = document.createElement("div");
-        buttons.className = "buttons";
+        const attendanceButtons = document.createElement("div");
+        attendanceButtons.className = "buttons";
 
-        const options = [
+        [
           ["出席", "出席"],
           ["欠席", "欠席"],
           ["遅刻", "遅刻"],
           ["取り消し", ""]
-        ];
-
-        options.forEach(([label, value]) => {
+        ].forEach(([label, value]) => {
           const button = document.createElement("button");
           button.textContent = label;
 
@@ -216,25 +358,123 @@
             saveRecord(lesson.id, value);
           });
 
-          buttons.appendChild(button);
+          attendanceButtons.appendChild(button);
         });
 
-        card.append(title, status, buttons);
+        const editButtons = document.createElement("div");
+        editButtons.className = "buttons";
+        editButtons.style.marginTop = "12px";
+
+        const editButton = document.createElement("button");
+        editButton.textContent = "授業を編集";
+
+        editButton.addEventListener("click", () => {
+          startEditingLesson(lesson);
+        });
+
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "授業を削除";
+        deleteButton.className = "danger";
+
+        deleteButton.addEventListener("click", () => {
+          const confirmed = confirm(
+            `「${lesson.name}」を削除しますか？\nこの授業は一覧から消えます。`
+          );
+
+          if (!confirmed) return;
+
+          lessons = lessons.filter(
+            item => item.id !== lesson.id
+          );
+
+          saveLessons();
+
+          if (editingLessonId === lesson.id) {
+            resetLessonForm();
+          }
+
+          render();
+        });
+
+        editButtons.append(editButton, deleteButton);
+
+        card.append(
+          title,
+          time,
+          status,
+          attendanceButtons,
+          editButtons
+        );
+
         root.appendChild(card);
       });
 
-      const values = Object.values(records);
+      const values = Object.values(records).filter(
+        value => ["出席", "欠席", "遅刻"].includes(value)
+      );
+
       const attended = values.filter(
         value => value === "出席" || value === "遅刻"
       ).length;
+
       const absent = values.filter(
         value => value === "欠席"
       ).length;
-      const unrecorded = lessons.length - values.length;
+
+      const unrecorded = Math.max(
+        0,
+        lessons.length - values.length
+      );
 
       document.getElementById("summaryText").textContent =
         `出席・遅刻：${attended}　欠席：${absent}　未記録：${unrecorded}`;
     }
+
+    lessonForm.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const name = nameInput.value.trim();
+
+      if (!name) {
+        alert("授業名を入力してください。");
+        return;
+      }
+
+      if (editingLessonId !== null) {
+        lessons = lessons.map(lesson =>
+          lesson.id === editingLessonId
+            ? {
+                ...lesson,
+                name,
+                day: dayInput.value,
+                period: periodInput.value
+              }
+            : lesson
+        );
+      } else {
+        const newId = lessons.reduce(
+          (max, lesson) =>
+            Math.max(max, Number(lesson.id) || 0),
+          0
+        ) + 1;
+
+        lessons.push({
+          id: newId,
+          name,
+          day: dayInput.value,
+          period: periodInput.value
+        });
+      }
+
+      saveLessons();
+      resetLessonForm();
+      render();
+    });
+
+    cancelEditButton.addEventListener(
+      "click",
+      resetLessonForm
+    );
 
     dateInput.addEventListener("change", render);
 
