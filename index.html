@@ -434,8 +434,8 @@
         "土曜日"
       ];
 
-      const today = new Date();
-      const todayName = dayNames[today.getDay()];
+      const selectedDate = new Date(dateInput.value + "T12:00:00");
+			const selectedDay = dayNames[selectedDate.getDay()];
       
       console.log("今日の曜日:", todayName);
       console.log("登録されている授業:", lessons.map(lesson => ({
@@ -450,7 +450,7 @@
       header.appendChild(periodHeader);
 
       const todayHeader = document.createElement("th");
-      todayHeader.textContent = todayName;
+      todayHeader.textContent = selectedDay;
       header.appendChild(todayHeader);
 
       // 1限から7限までの行を作る
@@ -472,7 +472,7 @@
 
       // 今日の曜日に該当する授業だけを表示する
       lessons.forEach(lesson => {
-        if (lesson.day !== todayName || !lesson.period) {
+        if (lesson.day !== selectedDay || !lesson.period) {
           return;
         }
 
