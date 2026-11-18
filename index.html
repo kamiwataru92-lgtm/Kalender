@@ -168,6 +168,79 @@
       font-weight: bold;
       background: #f8f9fc;
     }
+
+    /* 予定 */
+    textarea {
+      display: block;
+      width: 100%;
+      margin-top: 6px;
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid #dce1eb;
+      border-radius: 9px;
+      font-size: 16px;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    .event-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .event-item {
+      border-left: 4px solid #3659d9;
+      background: #f5f7ff;
+      border-radius: 9px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+
+    .event-item .event-title {
+      font-weight: bold;
+      margin: 0 0 4px;
+      overflow-wrap: anywhere;
+    }
+
+    .event-item .event-meta,
+    .event-item .event-memo {
+      color: #687386;
+      font-size: 13px;
+      margin: 0 0 6px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .event-item .buttons button {
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    .upcoming-item {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      text-align: left;
+      margin-bottom: 8px;
+      align-items: baseline;
+    }
+
+    .upcoming-item .upcoming-date {
+      color: #3659d9;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .upcoming-item .upcoming-title {
+      overflow-wrap: anywhere;
+    }
+
+    .empty {
+      color: #687386;
+      font-size: 14px;
+      margin: 6px 0;
+    }
   </style>
 </head>
 
@@ -196,6 +269,16 @@
   		  読み込み中...
   		</div>
 		</section>
+
+    <section class="summary">
+      <h2 id="eventsHeading">📝 この日の予定</h2>
+      <ul class="event-list" id="eventsForDate"></ul>
+    </section>
+
+    <section class="summary">
+      <h2>🔔 これからの予定</h2>
+      <div id="upcomingEvents"></div>
+    </section>
 
 		<section id="classes"></section>
 
@@ -263,6 +346,49 @@
           <button
             type="button"
             id="cancelEditButton"
+            class="hidden"
+          >編集をキャンセル</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="editor" id="eventEditor">
+      <h2 id="eventFormHeading">予定を追加</h2>
+
+      <form id="eventForm">
+        <label for="eventTitle">予定名</label>
+        <input
+          id="eventTitle"
+          type="text"
+          maxlength="80"
+          placeholder="例：レポート提出、バイト、ゼミ発表"
+          required
+        >
+
+        <label for="eventDate">日付</label>
+        <input id="eventDate" type="date" required>
+
+        <label for="eventTime">時間（任意）</label>
+        <input id="eventTime" type="time">
+
+        <label for="eventMemo">メモ（任意）</label>
+        <textarea
+          id="eventMemo"
+          rows="2"
+          maxlength="300"
+          placeholder="例：A4で3枚、Moodleから提出"
+        ></textarea>
+
+        <div class="buttons">
+          <button
+            class="primary"
+            type="submit"
+            id="saveEventButton"
+          >予定を追加</button>
+
+          <button
+            type="button"
+            id="cancelEventEditButton"
             class="hidden"
           >編集をキャンセル</button>
         </div>
@@ -437,13 +563,6 @@
       const selectedDate = new Date(dateInput.value + "T12:00:00");
 			const selectedDay = dayNames[selectedDate.getDay()];
       
-      console.log("今日の曜日:", todayName);
-      console.log("登録されている授業:", lessons.map(lesson => ({
-        name: lesson.name,
-        day: lesson.day,
-        period: lesson.period
-      })));
-
       // 見出しを作る
       const periodHeader = document.createElement("th");
       periodHeader.textContent = "時限";
@@ -692,17 +811,262 @@ function renderAttendanceRates() {
         value => value === "欠席"
       ).length;
 
-      const unrecorded = Math.max(
-        0,
-        lessons.length - values.length
+      // 未記録はこの日の曜日の授業だけで数える
+      const lessonsForDay = lessons.filter(
+        lesson => lesson.day === selectedDay
       );
+
+      const unrecorded = lessonsForDay.filter(
+        lesson => !["出席", "欠席", "遅刻"].includes(records[lesson.id])
+      ).length;
 
       document.getElementById("summaryText").textContent =
   		`出席・遅刻：${attended}　欠席：${absent}　未記録：${unrecorded}`;
 
 		renderAttendanceRates();
 		renderTimetable();
+		renderEvents();
   		  }
+
+    // ===== 予定 =====
+    const eventsStorageKey = "kalender-events-v1";
+
+    const eventForm = document.getElementById("eventForm");
+    const eventTitleInput = document.getElementById("eventTitle");
+    const eventDateInput = document.getElementById("eventDate");
+    const eventTimeInput = document.getElementById("eventTime");
+    const eventMemoInput = document.getElementById("eventMemo");
+    const eventFormHeading = document.getElementById("eventFormHeading");
+    const saveEventButton = document.getElementById("saveEventButton");
+    const cancelEventEditButton = document.getElementById("cancelEventEditButton");
+
+    let editingEventId = null;
+
+    // 予定データを読み込む
+    function loadEvents() {
+      try {
+        const saved = JSON.parse(
+          localStorage.getItem(eventsStorageKey) || "[]"
+        );
+        return Array.isArray(saved) ? saved : [];
+      } catch (error) {
+        console.error("予定データの読み込みに失敗しました", error);
+        return [];
+      }
+    }
+
+    let events = loadEvents();
+
+    // 予定データを保存する
+    function saveEvents() {
+      localStorage.setItem(eventsStorageKey, JSON.stringify(events));
+    }
+
+    // 日付・時間順に並べる（時間なしはその日の先頭）
+    function compareEvents(a, b) {
+      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      return (a.time || "").localeCompare(b.time || "");
+    }
+
+    // 「11月18日(水)」形式
+    function formatDateLabel(dateString) {
+      const date = new Date(dateString + "T12:00:00");
+      const week = ["日", "月", "火", "水", "木", "金", "土"];
+      return `${date.getMonth() + 1}月${date.getDate()}日(${week[date.getDay()]})`;
+    }
+
+    // 予定フォームを初期状態に戻す
+    function resetEventForm() {
+      editingEventId = null;
+      eventForm.reset();
+      eventDateInput.value = dateInput.value;
+
+      eventFormHeading.textContent = "予定を追加";
+      saveEventButton.textContent = "予定を追加";
+      cancelEventEditButton.classList.add("hidden");
+    }
+
+    // 予定の編集を開始する
+    function startEditingEvent(item) {
+      editingEventId = item.id;
+
+      eventTitleInput.value = item.title;
+      eventDateInput.value = item.date;
+      eventTimeInput.value = item.time || "";
+      eventMemoInput.value = item.memo || "";
+
+      eventFormHeading.textContent = "予定を編集";
+      saveEventButton.textContent = "変更を保存";
+      cancelEventEditButton.classList.remove("hidden");
+
+      document.getElementById("eventEditor").scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+
+      eventTitleInput.focus();
+    }
+
+    // 選択中の日付の予定と、これからの予定を表示する
+    function renderEvents() {
+      const list = document.getElementById("eventsForDate");
+      const upcoming = document.getElementById("upcomingEvents");
+
+      list.replaceChildren();
+      upcoming.replaceChildren();
+
+      document.getElementById("eventsHeading").textContent =
+        `📝 ${formatDateLabel(dateInput.value)}の予定`;
+
+      // 編集中でなければ、フォームの日付を選択中の日付に合わせる
+      if (editingEventId === null) {
+        eventDateInput.value = dateInput.value;
+      }
+
+      const todays = events
+        .filter(item => item.date === dateInput.value)
+        .sort(compareEvents);
+
+      if (todays.length === 0) {
+        const empty = document.createElement("li");
+        empty.className = "empty";
+        empty.textContent = "予定はありません。";
+        list.appendChild(empty);
+      }
+
+      todays.forEach(item => {
+        const li = document.createElement("li");
+        li.className = "event-item";
+
+        const title = document.createElement("p");
+        title.className = "event-title";
+        title.textContent = item.title;
+
+        const meta = document.createElement("p");
+        meta.className = "event-meta";
+        meta.textContent = item.time ? `🕒 ${item.time}` : "終日";
+
+        li.append(title, meta);
+
+        if (item.memo) {
+          const memo = document.createElement("p");
+          memo.className = "event-memo";
+          memo.textContent = item.memo;
+          li.appendChild(memo);
+        }
+
+        const buttons = document.createElement("div");
+        buttons.className = "buttons";
+
+        const editButton = document.createElement("button");
+        editButton.textContent = "編集";
+        editButton.addEventListener("click", () => startEditingEvent(item));
+
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "削除";
+        deleteButton.className = "danger";
+        deleteButton.addEventListener("click", () => {
+          if (!confirm(`「${item.title}」を削除しますか？`)) {
+            return;
+          }
+
+          events = events.filter(e => e.id !== item.id);
+          saveEvents();
+
+          if (editingEventId === item.id) {
+            resetEventForm();
+          }
+
+          renderEvents();
+        });
+
+        buttons.append(editButton, deleteButton);
+        li.appendChild(buttons);
+        list.appendChild(li);
+      });
+
+      // 今日以降の予定を近い順に5件
+      const today = localDateString();
+      const next = events
+        .filter(item => item.date >= today)
+        .sort(compareEvents)
+        .slice(0, 5);
+
+      if (next.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "これからの予定はありません。";
+        upcoming.appendChild(empty);
+        return;
+      }
+
+      next.forEach(item => {
+        // タップするとその日に移動する
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "upcoming-item";
+
+        const date = document.createElement("span");
+        date.className = "upcoming-date";
+        date.textContent =
+          formatDateLabel(item.date) + (item.time ? " " + item.time : "");
+
+        const title = document.createElement("span");
+        title.className = "upcoming-title";
+        title.textContent = item.title;
+
+        button.append(date, title);
+        button.addEventListener("click", () => {
+          dateInput.value = item.date;
+          render();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        upcoming.appendChild(button);
+      });
+    }
+
+    // 予定の追加・編集を保存する
+    eventForm.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const title = eventTitleInput.value.trim();
+      const date = eventDateInput.value;
+
+      if (!title || !date) {
+        alert("予定名と日付を入力してください。");
+        return;
+      }
+
+      const data = {
+        title,
+        date,
+        time: eventTimeInput.value,
+        memo: eventMemoInput.value.trim()
+      };
+
+      if (editingEventId !== null) {
+        events = events.map(item =>
+          item.id === editingEventId ? { ...item, ...data } : item
+        );
+      } else {
+        const newId = events.reduce(
+          (max, item) => Math.max(max, Number(item.id) || 0),
+          0
+        ) + 1;
+
+        events.push({ id: newId, ...data });
+      }
+
+      saveEvents();
+      resetEventForm();
+
+      // 追加した予定の日付に移動して表示する
+      dateInput.value = date;
+      render();
+    });
+
+    cancelEventEditButton.addEventListener("click", resetEventForm);
 
     // 授業の追加・編集を保存する
     lessonForm.addEventListener("submit", event => {
