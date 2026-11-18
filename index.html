@@ -2,9 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f7fb">
-  <title>Kalender - 出席管理</title>
+  <title>Kalender - 生活管理</title>
 
   <style>
     * {
@@ -13,7 +13,7 @@
 
     body {
       margin: 0;
-      padding: 20px;
+      padding: 0 16px calc(90px + env(safe-area-inset-bottom));
       background: #f5f7fb;
       color: #20283a;
       font-family: sans-serif;
@@ -22,28 +22,59 @@
     header,
     main {
       max-width: 600px;
-      margin: 20px auto;
+      margin: 0 auto;
+    }
+
+    header {
+      padding-top: 16px;
     }
 
     h1 {
-      margin-bottom: 8px;
+      margin: 8px 0 4px;
+      font-size: 24px;
     }
 
     h2 {
       font-size: 18px;
+      margin-top: 0;
     }
 
     .description,
     .status,
-    .lesson-time {
+    .lesson-time,
+    .muted {
       color: #687386;
       font-size: 14px;
     }
 
-    .date-picker,
+    /* ---- 日付バー ---- */
+    .date-bar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: #f5f7fb;
+      padding: 10px 0;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .date-bar input {
+      flex: 1;
+      margin: 0;
+    }
+
+    .date-bar button {
+      flex: none;
+      min-width: 44px;
+      height: 46px;
+    }
+
+    /* ---- カード ---- */
     .summary,
     .card,
-    .editor {
+    .editor,
+    .timetable {
       background: white;
       padding: 18px;
       border-radius: 14px;
@@ -51,8 +82,17 @@
       box-shadow: 0 3px 12px #00000008;
     }
 
+    .card h2 {
+      margin-bottom: 6px;
+    }
+
+    .summary p {
+      margin: 6px 0;
+    }
+
     input,
-    select {
+    select,
+    textarea {
       display: block;
       width: 100%;
       margin-top: 6px;
@@ -61,17 +101,18 @@
       border: 1px solid #dce1eb;
       border-radius: 9px;
       font-size: 16px;
+      font-family: inherit;
       background: white;
+      color: inherit;
+    }
+
+    textarea {
+      resize: vertical;
     }
 
     label {
       display: block;
       font-size: 14px;
-    }
-
-    .card h2 {
-      margin-top: 0;
-      margin-bottom: 6px;
     }
 
     .buttons {
@@ -85,6 +126,7 @@
       border-radius: 9px;
       padding: 10px 13px;
       background: white;
+      color: inherit;
       font-size: 14px;
       cursor: pointer;
     }
@@ -100,33 +142,415 @@
       color: #b42318;
     }
 
-    .summary p {
-      margin: 6px 0;
-    }
-
-    .editor h2 {
-      margin-top: 0;
+    button.small {
+      padding: 6px 10px;
+      font-size: 13px;
     }
 
     .hidden {
+      display: none !important;
+    }
+
+    .empty {
+      color: #687386;
+      font-size: 14px;
+      margin: 6px 0;
+    }
+
+    .inline-form {
+      display: flex;
+      gap: 8px;
+    }
+
+    .inline-form input,
+    .inline-form select {
+      margin: 0;
+    }
+
+    .inline-form button {
+      flex: none;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .row > * {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* ---- タブ ---- */
+    .tab-panel {
       display: none;
     }
 
-    footer {
-      text-align: center;
-      color: #687386;
-      font-size: 12px;
-      margin: 30px 0;
+    .tab-panel.active {
+      display: block;
     }
 
-    .timetable {
+    .tab-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 10;
+      display: flex;
+      justify-content: center;
       background: white;
-      padding: 16px;
-      border-radius: 14px;
-      margin-bottom: 14px;
-      box-shadow: 0 3px 12px #00000008;
+      border-top: 1px solid #dce1eb;
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
+    .tab-bar button {
+      flex: 1;
+      max-width: 150px;
+      border: none;
+      border-radius: 0;
+      background: none;
+      padding: 8px 4px 10px;
+      font-size: 11px;
+      color: #687386;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .tab-bar button .tab-icon {
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .tab-bar button.active {
+      color: #3659d9;
+      font-weight: bold;
+    }
+
+    /* ---- 今日のまとめ ---- */
+    .overview-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 0 0 12px;
+    }
+
+    .chips {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .chip {
+      text-align: left;
+      background: #f5f7ff;
+      border: 1px solid #e3e8f8;
+      border-radius: 9px;
+      padding: 10px 12px;
+    }
+
+    .chip .chip-label {
+      display: block;
+      font-size: 12px;
+      color: #687386;
+    }
+
+    .chip .chip-value {
+      display: block;
+      font-size: 17px;
+      font-weight: bold;
+      margin-top: 2px;
+    }
+
+    /* ---- やることリスト ---- */
+    .check-list {
+      list-style: none;
+      margin: 0 0 12px;
+      padding: 0;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #eef1f6;
+    }
+
+    .check-item:last-child {
+      border-bottom: none;
+    }
+
+    .check-item input[type="checkbox"] {
+      width: 22px;
+      height: 22px;
+      margin: 0;
+      flex: none;
+      accent-color: #3659d9;
+    }
+
+    .check-item .check-text {
+      flex: 1;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .check-item.done .check-text {
+      color: #9aa3b2;
+      text-decoration: line-through;
+    }
+
+    .check-item .check-sub {
+      display: block;
+      font-size: 12px;
+      color: #b42318;
+    }
+
+    .icon-button {
+      flex: none;
+      border: none;
+      background: none;
+      color: #9aa3b2;
+      padding: 6px 8px;
+      font-size: 16px;
+    }
+
+    .progress {
+      height: 8px;
+      background: #eef1f6;
+      border-radius: 99px;
+      overflow: hidden;
+      margin: 6px 0 12px;
+    }
+
+    .progress > div {
+      height: 100%;
+      background: #3659d9;
+      border-radius: 99px;
+      transition: width 0.2s;
+    }
+
+    .progress.over > div {
+      background: #b42318;
+    }
+
+    /* ---- 習慣 ---- */
+    .habit-item {
+      padding: 10px 0;
+      border-bottom: 1px solid #eef1f6;
+    }
+
+    .habit-item:last-child {
+      border-bottom: none;
+    }
+
+    .habit-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .habit-toggle {
+      flex: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      font-size: 20px;
+      padding: 0;
+    }
+
+    .habit-toggle.done {
+      background: #3659d9;
+      border-color: #3659d9;
+      color: white;
+    }
+
+    .habit-name {
+      flex: 1;
+      min-width: 0;
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
+    .habit-streak {
+      display: block;
+      font-weight: normal;
+      font-size: 12px;
+      color: #687386;
+      margin-top: 2px;
+    }
+
+    .habit-week {
+      display: flex;
+      gap: 6px;
+      margin: 8px 0 0 54px;
+    }
+
+    .habit-day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 10px;
+      color: #9aa3b2;
+    }
+
+    .habit-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #eef1f6;
+    }
+
+    .habit-dot.on {
+      background: #3659d9;
+    }
+
+    /* ---- 予定 ---- */
+    .event-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .event-item {
+      border-left: 4px solid #3659d9;
+      background: #f5f7ff;
+      border-radius: 9px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+
+    .event-title {
+      font-weight: bold;
+      margin: 0 0 4px;
+      overflow-wrap: anywhere;
+    }
+
+    .event-meta,
+    .event-memo {
+      color: #687386;
+      font-size: 13px;
+      margin: 0 0 6px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .upcoming-item {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      text-align: left;
+      margin-bottom: 8px;
+      align-items: baseline;
+    }
+
+    .upcoming-date {
+      color: #3659d9;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .upcoming-title {
+      overflow-wrap: anywhere;
+    }
+
+    /* ---- 家計簿 ---- */
+    .type-switch {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .type-switch button {
+      flex: 1;
+    }
+
+    .money-totals {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .money-totals div {
+      background: #f5f7ff;
+      border-radius: 9px;
+      padding: 10px;
+    }
+
+    .money-totals span {
+      display: block;
+      font-size: 12px;
+      color: #687386;
+    }
+
+    .money-totals strong {
+      display: block;
+      font-size: 16px;
+      margin-top: 2px;
+      overflow-wrap: anywhere;
+    }
+
+    .income {
+      color: #157347;
+    }
+
+    .expense {
+      color: #b42318;
+    }
+
+    .category-row {
+      display: grid;
+      grid-template-columns: 70px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      margin: 6px 0;
+    }
+
+    .category-bar {
+      height: 10px;
+      background: #eef1f6;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .category-bar > div {
+      height: 100%;
+      background: #3659d9;
+    }
+
+    .money-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #eef1f6;
+    }
+
+    .money-item:last-child {
+      border-bottom: none;
+    }
+
+    .money-item .money-main {
+      flex: 1;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .money-item .money-cat {
+      display: block;
+      font-size: 12px;
+      color: #687386;
+    }
+
+    .money-item .money-amount {
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    /* ---- 時間割 ---- */
     .timetable-scroll {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
@@ -134,7 +558,6 @@
 
     .timetable table {
       width: 100%;
-      min-width: 0;
       border-collapse: collapse;
       text-align: center;
       table-layout: fixed;
@@ -153,7 +576,7 @@
     }
 
     .timetable td {
-      height: 65px;
+      height: 52px;
     }
 
     .timetable td.has-lesson {
@@ -168,121 +591,862 @@
       font-weight: bold;
       background: #f8f9fc;
     }
+
+    footer {
+      text-align: center;
+      color: #687386;
+      font-size: 12px;
+      margin: 30px 0;
+    }
   </style>
 </head>
 
 <body>
   <header>
     <h1>📚 Kalender</h1>
-    <p class="description">
-      日付ごとに大学の出席状況を記録しよう。
-    </p>
+    <p class="description">毎日の生活と大学をまとめて管理しよう。</p>
   </header>
 
   <main>
-    <section class="date-picker">
-      <label for="recordDate">記録する日付</label>
-      <input type="date" id="recordDate">
-    </section>
+    <!-- 全タブ共通の日付 -->
+    <div class="date-bar">
+      <button type="button" id="prevDay" aria-label="前の日">◀</button>
+      <input type="date" id="recordDate" aria-label="日付">
+      <button type="button" id="nextDay" aria-label="次の日">▶</button>
+      <button type="button" id="todayButton">今日</button>
+    </div>
 
-    <section class="summary">
-      <h2 id="summaryHeading">今日の記録</h2>
-      <p id="summaryText">読み込み中...</p>
-    </section>
+    <!-- ===== 生活 ===== -->
+    <div class="tab-panel" data-tab="life">
+      <section class="summary">
+        <p class="overview-title" id="overviewTitle"></p>
+        <div class="chips" id="overviewChips"></div>
+      </section>
 
-    <section class="summary">
-			<h2>📊 累計出席率</h2>
-			<div id="attendanceRates">
-  		  読み込み中...
-  		</div>
-		</section>
+      <section class="summary">
+        <h2>✅ やることリスト</h2>
+        <div class="progress"><div id="todoProgress" style="width:0%"></div></div>
+        <ul class="check-list" id="todoList"></ul>
 
-		<section id="classes"></section>
-
-    <section class="timetable">
-      <h2>📅 今日の時間割</h2>
-
-      <div class="timetable-scroll">
-        <table>
-          <thead>
-            <tr id="timetableHeader">
-              <th>時限</th>
-              <th>今日</th>
-            </tr>
-          </thead>
-
-          <tbody id="timetableBody"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="editor">
-      <h2 id="formHeading">授業を追加</h2>
-
-      <form id="lessonForm">
-        <label for="lessonName">授業名</label>
-        <input
-          id="lessonName"
-          type="text"
-          maxlength="80"
-          placeholder="例：国際経済学"
-          required
-        >
-
-        <label for="lessonDay">曜日</label>
-        <select id="lessonDay">
-          <option value="">曜日を選択（任意）</option>
-          <option value="月曜日">月曜日</option>
-          <option value="火曜日">火曜日</option>
-          <option value="水曜日">水曜日</option>
-          <option value="木曜日">木曜日</option>
-          <option value="金曜日">金曜日</option>
-          <option value="土曜日">土曜日</option>
-          <option value="日曜日">日曜日</option>
-        </select>
-
-        <label for="lessonPeriod">時限</label>
-        <select id="lessonPeriod">
-          <option value="">時限を選択（任意）</option>
-          <option value="1">1限</option>
-          <option value="2">2限</option>
-          <option value="3">3限</option>
-          <option value="4">4限</option>
-          <option value="5">5限</option>
-          <option value="6">6限</option>
-          <option value="7">7限</option>
-        </select>
-
-        <div class="buttons">
-          <button
-            class="primary"
-            type="submit"
-            id="saveLessonButton"
-          >授業を追加</button>
-
-          <button
-            type="button"
-            id="cancelEditButton"
-            class="hidden"
-          >編集をキャンセル</button>
+        <div id="carryOverBox" class="hidden">
+          <p class="muted" style="margin:14px 0 4px">前日までの残り</p>
+          <ul class="check-list" id="carryOverList"></ul>
         </div>
-      </form>
-    </section>
+
+        <form class="inline-form" id="todoForm">
+          <input
+            id="todoText"
+            type="text"
+            maxlength="100"
+            placeholder="例：洗濯、牛乳を買う"
+            aria-label="やること"
+            required
+          >
+          <button class="primary" type="submit">追加</button>
+        </form>
+      </section>
+
+      <section class="summary">
+        <h2>🔁 習慣</h2>
+        <div id="habitList"></div>
+
+        <form class="inline-form" id="habitForm" style="margin-top:12px">
+          <input
+            id="habitName"
+            type="text"
+            maxlength="40"
+            placeholder="例：7時に起きる、筋トレ、英単語"
+            aria-label="新しい習慣"
+            required
+          >
+          <button class="primary" type="submit">追加</button>
+        </form>
+      </section>
+    </div>
+
+    <!-- ===== 予定 ===== -->
+    <div class="tab-panel" data-tab="events">
+      <section class="summary">
+        <h2 id="eventsHeading">📝 この日の予定</h2>
+        <ul class="event-list" id="eventsForDate"></ul>
+      </section>
+
+      <section class="summary">
+        <h2>🔔 これからの予定</h2>
+        <div id="upcomingEvents"></div>
+      </section>
+
+      <section class="editor" id="eventEditor">
+        <h2 id="eventFormHeading">予定を追加</h2>
+
+        <form id="eventForm">
+          <label for="eventTitle">予定名</label>
+          <input
+            id="eventTitle"
+            type="text"
+            maxlength="80"
+            placeholder="例：レポート提出、バイト、ゼミ発表"
+            required
+          >
+
+          <div class="row">
+            <div>
+              <label for="eventDate">日付</label>
+              <input id="eventDate" type="date" required>
+            </div>
+            <div>
+              <label for="eventTime">時間（任意）</label>
+              <input id="eventTime" type="time">
+            </div>
+          </div>
+
+          <label for="eventMemo">メモ（任意）</label>
+          <textarea
+            id="eventMemo"
+            rows="2"
+            maxlength="300"
+            placeholder="例：A4で3枚、Moodleから提出"
+          ></textarea>
+
+          <div class="buttons">
+            <button class="primary" type="submit" id="saveEventButton">予定を追加</button>
+            <button type="button" id="cancelEventEditButton" class="hidden">編集をキャンセル</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <!-- ===== 授業 ===== -->
+    <div class="tab-panel" data-tab="classes">
+      <section class="summary">
+        <h2 id="summaryHeading">今日の記録</h2>
+        <p id="summaryText">読み込み中...</p>
+      </section>
+
+      <section id="classes"></section>
+
+      <section class="timetable">
+        <h2>📅 この日の時間割</h2>
+        <div class="timetable-scroll">
+          <table>
+            <thead>
+              <tr id="timetableHeader"></tr>
+            </thead>
+            <tbody id="timetableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="summary">
+        <h2>📊 累計出席率</h2>
+        <div id="attendanceRates">読み込み中...</div>
+      </section>
+
+      <section class="editor" id="lessonEditor">
+        <h2 id="formHeading">授業を追加</h2>
+
+        <form id="lessonForm">
+          <label for="lessonName">授業名</label>
+          <input
+            id="lessonName"
+            type="text"
+            maxlength="80"
+            placeholder="例：国際経済学"
+            required
+          >
+
+          <div class="row">
+            <div>
+              <label for="lessonDay">曜日</label>
+              <select id="lessonDay">
+                <option value="">未設定</option>
+                <option value="月曜日">月曜日</option>
+                <option value="火曜日">火曜日</option>
+                <option value="水曜日">水曜日</option>
+                <option value="木曜日">木曜日</option>
+                <option value="金曜日">金曜日</option>
+                <option value="土曜日">土曜日</option>
+                <option value="日曜日">日曜日</option>
+              </select>
+            </div>
+            <div>
+              <label for="lessonPeriod">時限</label>
+              <select id="lessonPeriod">
+                <option value="">未設定</option>
+                <option value="1">1限</option>
+                <option value="2">2限</option>
+                <option value="3">3限</option>
+                <option value="4">4限</option>
+                <option value="5">5限</option>
+                <option value="6">6限</option>
+                <option value="7">7限</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="buttons">
+            <button class="primary" type="submit" id="saveLessonButton">授業を追加</button>
+            <button type="button" id="cancelEditButton" class="hidden">編集をキャンセル</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="summary" id="otherLessonsBox">
+        <h2>📚 登録している授業</h2>
+        <div id="allLessons"></div>
+      </section>
+    </div>
+
+    <!-- ===== 家計簿 ===== -->
+    <div class="tab-panel" data-tab="money">
+      <section class="summary">
+        <h2 id="monthHeading">💴 今月</h2>
+        <div class="money-totals">
+          <div><span>収入</span><strong class="income" id="monthIncome">¥0</strong></div>
+          <div><span>支出</span><strong class="expense" id="monthExpense">¥0</strong></div>
+          <div><span>差額</span><strong id="monthBalance">¥0</strong></div>
+        </div>
+
+        <div id="budgetBox">
+          <p class="muted" id="budgetText" style="margin:0"></p>
+          <div class="progress" id="budgetProgressWrap"><div id="budgetProgress" style="width:0%"></div></div>
+        </div>
+
+        <form class="inline-form" id="budgetForm">
+          <input
+            id="budgetInput"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            step="1"
+            placeholder="1か月の予算（円）"
+            aria-label="1か月の予算"
+          >
+          <button type="submit">予算を設定</button>
+        </form>
+      </section>
+
+      <section class="summary">
+        <h2>📂 今月の支出の内訳</h2>
+        <div id="categoryBreakdown"></div>
+      </section>
+
+      <section class="summary">
+        <h2 id="moneyDayHeading">🧾 この日の記録</h2>
+        <div id="moneyList"></div>
+      </section>
+
+      <section class="editor">
+        <h2>記録を追加</h2>
+
+        <form id="moneyForm">
+          <div class="type-switch">
+            <button type="button" data-type="支出" class="selected">支出</button>
+            <button type="button" data-type="収入">収入</button>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="moneyAmount">金額（円）</label>
+              <input
+                id="moneyAmount"
+                type="number"
+                inputmode="numeric"
+                min="1"
+                step="1"
+                placeholder="例：850"
+                required
+              >
+            </div>
+            <div>
+              <label for="moneyCategory">カテゴリ</label>
+              <select id="moneyCategory"></select>
+            </div>
+          </div>
+
+          <label for="moneyMemo">メモ（任意）</label>
+          <input id="moneyMemo" type="text" maxlength="60" placeholder="例：学食ランチ">
+
+          <button class="primary" type="submit">記録する</button>
+        </form>
+      </section>
+    </div>
+
+    <footer>Kalender · 生活管理</footer>
   </main>
 
-  <footer>Kalender · 出席管理</footer>
+  <nav class="tab-bar" id="tabBar">
+    <button type="button" data-tab="life"><span class="tab-icon">🏠</span>生活</button>
+    <button type="button" data-tab="events"><span class="tab-icon">📝</span>予定</button>
+    <button type="button" data-tab="classes"><span class="tab-icon">🎓</span>授業</button>
+    <button type="button" data-tab="money"><span class="tab-icon">💴</span>家計簿</button>
+  </nav>
 
   <script>
+    // =========================================================
+    // 共通
+    // =========================================================
+    const DAY_NAMES = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
+    const WEEK_SHORT = ["日", "月", "火", "水", "木", "金", "土"];
+
+    const dateInput = document.getElementById("recordDate");
+
+    function loadJSON(key, fallback) {
+      try {
+        const value = JSON.parse(localStorage.getItem(key) || "null");
+        return value ?? fallback;
+      } catch (error) {
+        console.error(`${key} の読み込みに失敗しました`, error);
+        return fallback;
+      }
+    }
+
+    function saveJSON(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (error) {
+        console.error(`${key} の保存に失敗しました`, error);
+      }
+    }
+
+    function nextId(list) {
+      return list.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
+    }
+
+    // Date → YYYY-MM-DD
+    function localDateString(date = new Date()) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    // YYYY-MM-DD → Date（時差でずれないよう正午にする）
+    function parseDate(dateString) {
+      return new Date(dateString + "T12:00:00");
+    }
+
+    function addDays(dateString, days) {
+      const date = parseDate(dateString);
+      date.setDate(date.getDate() + days);
+      return localDateString(date);
+    }
+
+    // 「11月18日(水)」形式
+    function formatDateLabel(dateString) {
+      const date = parseDate(dateString);
+      return `${date.getMonth() + 1}月${date.getDate()}日(${WEEK_SHORT[date.getDay()]})`;
+    }
+
+    function yen(amount) {
+      return "¥" + Math.round(amount).toLocaleString("ja-JP");
+    }
+
+    function selectedDayName() {
+      return DAY_NAMES[parseDate(dateInput.value).getDay()];
+    }
+
+    function makeEl(tag, className, text) {
+      const el = document.createElement(tag);
+      if (className) el.className = className;
+      if (text !== undefined) el.textContent = text;
+      return el;
+    }
+
+    dateInput.value = localDateString();
+
+    // =========================================================
+    // タブ
+    // =========================================================
+    const tabStorageKey = "kalender-tab-v1";
+    const tabButtons = document.querySelectorAll("#tabBar button");
+    const tabPanels = document.querySelectorAll(".tab-panel");
+
+    function showTab(name) {
+      if (![...tabPanels].some(panel => panel.dataset.tab === name)) {
+        name = "life";
+      }
+
+      tabPanels.forEach(panel => {
+        panel.classList.toggle("active", panel.dataset.tab === name);
+      });
+
+      tabButtons.forEach(button => {
+        button.classList.toggle("active", button.dataset.tab === name);
+      });
+
+      try {
+        localStorage.setItem(tabStorageKey, name);
+      } catch (error) {
+        // 保存できなくても表示には影響しない
+      }
+    }
+
+    tabButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        showTab(button.dataset.tab);
+        window.scrollTo({ top: 0 });
+      });
+    });
+
+    let initialTab = "life";
+    try {
+      initialTab = localStorage.getItem(tabStorageKey) || "life";
+    } catch (error) {
+      // そのまま「生活」タブ
+    }
+    showTab(initialTab);
+
+    // =========================================================
+    // データ
+    // =========================================================
+    const lessonsStorageKey = "kalender-lessons-v1";
+    const attendanceStorageKey = "kalender-attendance-v2";
+    const eventsStorageKey = "kalender-events-v1";
+    const todosStorageKey = "kalender-todos-v1";
+    const habitsStorageKey = "kalender-habits-v1";
+    const habitLogStorageKey = "kalender-habit-log-v1";
+    const moneyStorageKey = "kalender-money-v1";
+    const budgetStorageKey = "kalender-budget-v1";
+
     const defaultLessons = [
       { id: 1, name: "国際経済学", day: "", period: "" },
       { id: 2, name: "経済政策論", day: "", period: "" },
       { id: 3, name: "情報リテラシー", day: "", period: "" }
     ];
 
-    const attendanceStorageKey = "kalender-attendance-v2";
-    const lessonsStorageKey = "kalender-lessons-v1";
+    let lessons = loadJSON(lessonsStorageKey, null);
+    if (!Array.isArray(lessons)) {
+      lessons = defaultLessons.map(lesson => ({ ...lesson }));
+      saveJSON(lessonsStorageKey, lessons);
+    }
 
-    const dateInput = document.getElementById("recordDate");
+    let events = loadJSON(eventsStorageKey, []);
+    let todos = loadJSON(todosStorageKey, []);
+    let habits = loadJSON(habitsStorageKey, []);
+    let habitLog = loadJSON(habitLogStorageKey, {}); // { "2026-11-18": [習慣id, ...] }
+    let money = loadJSON(moneyStorageKey, []);
+    let monthlyBudget = Number(loadJSON(budgetStorageKey, 0)) || 0;
+
+    if (!Array.isArray(events)) events = [];
+    if (!Array.isArray(todos)) todos = [];
+    if (!Array.isArray(habits)) habits = [];
+    if (!Array.isArray(money)) money = [];
+    if (typeof habitLog !== "object" || Array.isArray(habitLog)) habitLog = {};
+
+    // =========================================================
+    // 生活：今日のまとめ
+    // =========================================================
+    function renderOverview() {
+      const date = dateInput.value;
+      const isToday = date === localDateString();
+
+      document.getElementById("overviewTitle").textContent =
+        (isToday ? "今日 " : "") + formatDateLabel(date);
+
+      const dayTodos = todos.filter(todo => todo.date === date);
+      const doneTodos = dayTodos.filter(todo => todo.done).length;
+      const doneHabits = habits.filter(habit => isHabitDone(habit.id, date)).length;
+      const dayEvents = events.filter(item => item.date === date).length;
+      const dayLessons = lessons.filter(lesson => lesson.day === selectedDayName()).length;
+      const daySpending = money
+        .filter(item => item.date === date && item.type === "支出")
+        .reduce((sum, item) => sum + item.amount, 0);
+
+      const chips = [
+        ["やること", `${doneTodos} / ${dayTodos.length}`, null],
+        ["習慣", `${doneHabits} / ${habits.length}`, null],
+        ["予定", `${dayEvents}件`, "events"],
+        ["授業", `${dayLessons}コマ`, "classes"],
+        ["支出", yen(daySpending), "money"]
+      ];
+
+      const root = document.getElementById("overviewChips");
+      root.replaceChildren();
+
+      chips.forEach(([label, value, tab]) => {
+        const chip = makeEl(tab ? "button" : "div", "chip");
+        if (tab) {
+          chip.type = "button";
+          chip.addEventListener("click", () => {
+            showTab(tab);
+            window.scrollTo({ top: 0 });
+          });
+        }
+        chip.append(makeEl("span", "chip-label", label), makeEl("span", "chip-value", value));
+        root.appendChild(chip);
+      });
+    }
+
+    // =========================================================
+    // 生活：やることリスト
+    // =========================================================
+    function saveTodos() {
+      saveJSON(todosStorageKey, todos);
+    }
+
+    function todoRow(todo, showDate) {
+      const li = makeEl("li", "check-item" + (todo.done ? " done" : ""));
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = todo.done;
+      checkbox.setAttribute("aria-label", todo.text);
+      checkbox.addEventListener("change", () => {
+        todo.done = checkbox.checked;
+        saveTodos();
+        render();
+      });
+
+      const text = makeEl("span", "check-text", todo.text);
+      if (showDate) {
+        text.appendChild(makeEl("span", "check-sub", formatDateLabel(todo.date) + "の分"));
+      }
+
+      li.append(checkbox, text);
+
+      if (showDate) {
+        const moveButton = makeEl("button", "small", "この日へ");
+        moveButton.type = "button";
+        moveButton.addEventListener("click", () => {
+          todo.date = dateInput.value;
+          saveTodos();
+          render();
+        });
+        li.appendChild(moveButton);
+      }
+
+      const deleteButton = makeEl("button", "icon-button", "✕");
+      deleteButton.type = "button";
+      deleteButton.setAttribute("aria-label", `「${todo.text}」を削除`);
+      deleteButton.addEventListener("click", () => {
+        todos = todos.filter(item => item.id !== todo.id);
+        saveTodos();
+        render();
+      });
+      li.appendChild(deleteButton);
+
+      return li;
+    }
+
+    function renderTodos() {
+      const date = dateInput.value;
+      const list = document.getElementById("todoList");
+      list.replaceChildren();
+
+      // 未完了を上、完了を下に
+      const dayTodos = todos
+        .filter(todo => todo.date === date)
+        .sort((a, b) => Number(a.done) - Number(b.done) || a.id - b.id);
+
+      if (dayTodos.length === 0) {
+        list.appendChild(makeEl("li", "empty", "やることはまだありません。"));
+      }
+
+      dayTodos.forEach(todo => list.appendChild(todoRow(todo, false)));
+
+      const done = dayTodos.filter(todo => todo.done).length;
+      document.getElementById("todoProgress").style.width =
+        dayTodos.length ? `${(done / dayTodos.length) * 100}%` : "0%";
+
+      // 前日までに終わっていないもの
+      const carry = todos
+        .filter(todo => !todo.done && todo.date < date)
+        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
+
+      const carryBox = document.getElementById("carryOverBox");
+      const carryList = document.getElementById("carryOverList");
+      carryList.replaceChildren();
+      carryBox.classList.toggle("hidden", carry.length === 0);
+      carry.forEach(todo => carryList.appendChild(todoRow(todo, true)));
+    }
+
+    document.getElementById("todoForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const input = document.getElementById("todoText");
+      const text = input.value.trim();
+      if (!text) return;
+
+      todos.push({ id: nextId(todos), date: dateInput.value, text, done: false });
+      saveTodos();
+      input.value = "";
+      render();
+      input.focus();
+    });
+
+    // =========================================================
+    // 生活：習慣トラッカー
+    // =========================================================
+    function isHabitDone(habitId, date) {
+      return Array.isArray(habitLog[date]) && habitLog[date].includes(habitId);
+    }
+
+    function toggleHabit(habitId, date) {
+      const list = Array.isArray(habitLog[date]) ? habitLog[date] : [];
+
+      if (list.includes(habitId)) {
+        habitLog[date] = list.filter(id => id !== habitId);
+      } else {
+        habitLog[date] = [...list, habitId];
+      }
+
+      if (habitLog[date].length === 0) {
+        delete habitLog[date];
+      }
+
+      saveJSON(habitLogStorageKey, habitLog);
+      render();
+    }
+
+    // 選んだ日まで何日続いているか（その日が未達成なら前日までで数える）
+    function habitStreak(habitId, date) {
+      let day = isHabitDone(habitId, date) ? date : addDays(date, -1);
+      let count = 0;
+
+      while (isHabitDone(habitId, day)) {
+        count++;
+        day = addDays(day, -1);
+      }
+
+      return count;
+    }
+
+    function renderHabits() {
+      const date = dateInput.value;
+      const root = document.getElementById("habitList");
+      root.replaceChildren();
+
+      if (habits.length === 0) {
+        root.appendChild(makeEl("p", "empty", "続けたいことを登録しよう。"));
+        return;
+      }
+
+      habits.forEach(habit => {
+        const done = isHabitDone(habit.id, date);
+        const item = makeEl("div", "habit-item");
+        const top = makeEl("div", "habit-top");
+
+        const toggle = makeEl("button", "habit-toggle" + (done ? " done" : ""), done ? "✓" : "");
+        toggle.type = "button";
+        toggle.setAttribute("aria-pressed", String(done));
+        toggle.setAttribute("aria-label", `${habit.name}：${done ? "達成済み" : "未達成"}`);
+        toggle.addEventListener("click", () => toggleHabit(habit.id, date));
+
+        const name = makeEl("div", "habit-name", habit.name);
+        const streak = habitStreak(habit.id, date);
+        name.appendChild(
+          makeEl("span", "habit-streak", streak > 0 ? `🔥 ${streak}日連続` : "まだ連続記録なし")
+        );
+
+        const deleteButton = makeEl("button", "icon-button", "✕");
+        deleteButton.type = "button";
+        deleteButton.setAttribute("aria-label", `「${habit.name}」を削除`);
+        deleteButton.addEventListener("click", () => {
+          if (!confirm(`習慣「${habit.name}」を削除しますか？\nこれまでの記録も消えます。`)) return;
+
+          habits = habits.filter(h => h.id !== habit.id);
+          Object.keys(habitLog).forEach(day => {
+            habitLog[day] = habitLog[day].filter(id => id !== habit.id);
+            if (habitLog[day].length === 0) delete habitLog[day];
+          });
+          saveJSON(habitsStorageKey, habits);
+          saveJSON(habitLogStorageKey, habitLog);
+          render();
+        });
+
+        top.append(toggle, name, deleteButton);
+
+        // 直近7日
+        const week = makeEl("div", "habit-week");
+        for (let i = 6; i >= 0; i--) {
+          const day = addDays(date, -i);
+          const cell = makeEl("div", "habit-day");
+          cell.append(
+            makeEl("div", "habit-dot" + (isHabitDone(habit.id, day) ? " on" : "")),
+            makeEl("span", "", WEEK_SHORT[parseDate(day).getDay()])
+          );
+          week.appendChild(cell);
+        }
+
+        item.append(top, week);
+        root.appendChild(item);
+      });
+    }
+
+    document.getElementById("habitForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const input = document.getElementById("habitName");
+      const name = input.value.trim();
+      if (!name) return;
+
+      habits.push({ id: nextId(habits), name });
+      saveJSON(habitsStorageKey, habits);
+      input.value = "";
+      render();
+    });
+
+    // =========================================================
+    // 予定
+    // =========================================================
+    const eventForm = document.getElementById("eventForm");
+    const eventTitleInput = document.getElementById("eventTitle");
+    const eventDateInput = document.getElementById("eventDate");
+    const eventTimeInput = document.getElementById("eventTime");
+    const eventMemoInput = document.getElementById("eventMemo");
+    const eventFormHeading = document.getElementById("eventFormHeading");
+    const saveEventButton = document.getElementById("saveEventButton");
+    const cancelEventEditButton = document.getElementById("cancelEventEditButton");
+
+    let editingEventId = null;
+
+    function saveEvents() {
+      saveJSON(eventsStorageKey, events);
+    }
+
+    // 日付・時間順（時間なしはその日の先頭）
+    function compareEvents(a, b) {
+      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      return (a.time || "").localeCompare(b.time || "");
+    }
+
+    function resetEventForm() {
+      editingEventId = null;
+      eventForm.reset();
+      eventDateInput.value = dateInput.value;
+      eventFormHeading.textContent = "予定を追加";
+      saveEventButton.textContent = "予定を追加";
+      cancelEventEditButton.classList.add("hidden");
+    }
+
+    function startEditingEvent(item) {
+      editingEventId = item.id;
+      eventTitleInput.value = item.title;
+      eventDateInput.value = item.date;
+      eventTimeInput.value = item.time || "";
+      eventMemoInput.value = item.memo || "";
+
+      eventFormHeading.textContent = "予定を編集";
+      saveEventButton.textContent = "変更を保存";
+      cancelEventEditButton.classList.remove("hidden");
+
+      document.getElementById("eventEditor").scrollIntoView({ behavior: "smooth", block: "start" });
+      eventTitleInput.focus();
+    }
+
+    function renderEvents() {
+      const list = document.getElementById("eventsForDate");
+      const upcoming = document.getElementById("upcomingEvents");
+      list.replaceChildren();
+      upcoming.replaceChildren();
+
+      document.getElementById("eventsHeading").textContent =
+        `📝 ${formatDateLabel(dateInput.value)}の予定`;
+
+      if (editingEventId === null) {
+        eventDateInput.value = dateInput.value;
+      }
+
+      const dayEvents = events
+        .filter(item => item.date === dateInput.value)
+        .sort(compareEvents);
+
+      if (dayEvents.length === 0) {
+        list.appendChild(makeEl("li", "empty", "予定はありません。"));
+      }
+
+      dayEvents.forEach(item => {
+        const li = makeEl("li", "event-item");
+        li.append(
+          makeEl("p", "event-title", item.title),
+          makeEl("p", "event-meta", item.time ? `🕒 ${item.time}` : "終日")
+        );
+
+        if (item.memo) {
+          li.appendChild(makeEl("p", "event-memo", item.memo));
+        }
+
+        const buttons = makeEl("div", "buttons");
+
+        const editButton = makeEl("button", "small", "編集");
+        editButton.addEventListener("click", () => startEditingEvent(item));
+
+        const deleteButton = makeEl("button", "small danger", "削除");
+        deleteButton.addEventListener("click", () => {
+          if (!confirm(`「${item.title}」を削除しますか？`)) return;
+          events = events.filter(e => e.id !== item.id);
+          saveEvents();
+          if (editingEventId === item.id) resetEventForm();
+          render();
+        });
+
+        buttons.append(editButton, deleteButton);
+        li.appendChild(buttons);
+        list.appendChild(li);
+      });
+
+      // 今日以降の予定を近い順に5件
+      const today = localDateString();
+      const next = events
+        .filter(item => item.date >= today)
+        .sort(compareEvents)
+        .slice(0, 5);
+
+      if (next.length === 0) {
+        upcoming.appendChild(makeEl("p", "empty", "これからの予定はありません。"));
+        return;
+      }
+
+      next.forEach(item => {
+        const button = makeEl("button", "upcoming-item");
+        button.type = "button";
+        button.append(
+          makeEl("span", "upcoming-date", formatDateLabel(item.date) + (item.time ? " " + item.time : "")),
+          makeEl("span", "upcoming-title", item.title)
+        );
+        button.addEventListener("click", () => {
+          dateInput.value = item.date;
+          render();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+        upcoming.appendChild(button);
+      });
+    }
+
+    eventForm.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const title = eventTitleInput.value.trim();
+      const date = eventDateInput.value;
+
+      if (!title || !date) {
+        alert("予定名と日付を入力してください。");
+        return;
+      }
+
+      const data = {
+        title,
+        date,
+        time: eventTimeInput.value,
+        memo: eventMemoInput.value.trim()
+      };
+
+      if (editingEventId !== null) {
+        events = events.map(item => (item.id === editingEventId ? { ...item, ...data } : item));
+      } else {
+        events.push({ id: nextId(events), ...data });
+      }
+
+      saveEvents();
+      resetEventForm();
+      dateInput.value = date;
+      render();
+    });
+
+    cancelEventEditButton.addEventListener("click", resetEventForm);
+
+    // =========================================================
+    // 授業・出席
+    // =========================================================
     const lessonForm = document.getElementById("lessonForm");
     const nameInput = document.getElementById("lessonName");
     const dayInput = document.getElementById("lessonDay");
@@ -293,75 +1457,24 @@
 
     let editingLessonId = null;
 
-    // 授業データを読み込む
-    function loadLessons() {
-      try {
-        const saved = JSON.parse(
-          localStorage.getItem(lessonsStorageKey) || "null"
-        );
-
-        if (Array.isArray(saved)) {
-          return saved;
-        }
-      } catch (error) {
-        console.error("授業データの読み込みに失敗しました", error);
-      }
-
-      localStorage.setItem(
-        lessonsStorageKey,
-        JSON.stringify(defaultLessons)
-      );
-
-      return defaultLessons.map(lesson => ({ ...lesson }));
-    }
-
-    let lessons = loadLessons();
-
-    // 授業データを保存する
     function saveLessons() {
-      localStorage.setItem(
-        lessonsStorageKey,
-        JSON.stringify(lessons)
-      );
+      saveJSON(lessonsStorageKey, lessons);
     }
 
-    // 今日の日付を YYYY-MM-DD 形式にする
-    function localDateString(date = new Date()) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-
-      return `${year}-${month}-${day}`;
-    }
-
-    dateInput.value = localDateString();
-
-    // 保存済みの出席記録をすべて取得する
     function getAllRecords() {
-      try {
-        return JSON.parse(
-          localStorage.getItem(attendanceStorageKey) || "{}"
-        );
-      } catch (error) {
-        console.error("出席記録の読み込みに失敗しました", error);
-        return {};
-      }
+      const records = loadJSON(attendanceStorageKey, {});
+      return typeof records === "object" && !Array.isArray(records) ? records : {};
     }
 
-    // 選択中の日付の出席記録を取得する
     function getRecordsForDate() {
-      const allRecords = getAllRecords();
-      return allRecords[dateInput.value] || {};
+      return getAllRecords()[dateInput.value] || {};
     }
 
-    // 出席状況を保存する
     function saveRecord(lessonId, status) {
       const allRecords = getAllRecords();
       const date = dateInput.value;
 
-      if (!allRecords[date]) {
-        allRecords[date] = {};
-      }
+      if (!allRecords[date]) allRecords[date] = {};
 
       if (status === "") {
         delete allRecords[date][lessonId];
@@ -373,28 +1486,20 @@
         delete allRecords[date];
       }
 
-      localStorage.setItem(
-        attendanceStorageKey,
-        JSON.stringify(allRecords)
-      );
-
+      saveJSON(attendanceStorageKey, allRecords);
       render();
     }
 
-    // 授業フォームを初期状態に戻す
     function resetLessonForm() {
       editingLessonId = null;
       lessonForm.reset();
-
       formHeading.textContent = "授業を追加";
       saveLessonButton.textContent = "授業を追加";
       cancelEditButton.classList.add("hidden");
     }
 
-    // 授業の編集を開始する
     function startEditingLesson(lesson) {
       editingLessonId = lesson.id;
-
       nameInput.value = lesson.name;
       dayInput.value = lesson.day || "";
       periodInput.value = lesson.period || "";
@@ -403,344 +1508,192 @@
       saveLessonButton.textContent = "変更を保存";
       cancelEditButton.classList.remove("hidden");
 
-      document.querySelector(".editor").scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-      });
-
+      document.getElementById("lessonEditor").scrollIntoView({ behavior: "smooth", block: "start" });
       nameInput.focus();
     }
 
-    // 今日の曜日だけを表示する時間割
-    function renderTimetable() {
-      const tbody = document.getElementById("timetableBody");
-      const header = document.getElementById("timetableHeader");
+    function deleteLesson(lesson) {
+      if (!confirm(`「${lesson.name}」を削除しますか？\nこの授業は一覧から消えます。`)) return;
 
-      if (!tbody || !header) {
-        return;
-      }
-
-      tbody.replaceChildren();
-      header.replaceChildren();
-
-      // JavaScriptの曜日番号は日曜日が0、月曜日が1
-      const dayNames = [
-        "日曜日",
-        "月曜日",
-        "火曜日",
-        "水曜日",
-        "木曜日",
-        "金曜日",
-        "土曜日"
-      ];
-
-      const selectedDate = new Date(dateInput.value + "T12:00:00");
-			const selectedDay = dayNames[selectedDate.getDay()];
-      
-      console.log("今日の曜日:", todayName);
-      console.log("登録されている授業:", lessons.map(lesson => ({
-        name: lesson.name,
-        day: lesson.day,
-        period: lesson.period
-      })));
-
-      // 見出しを作る
-      const periodHeader = document.createElement("th");
-      periodHeader.textContent = "時限";
-      header.appendChild(periodHeader);
-
-      const todayHeader = document.createElement("th");
-      todayHeader.textContent = selectedDay;
-      header.appendChild(todayHeader);
-
-      // 1限から7限までの行を作る
-      for (let period = 1; period <= 7; period++) {
-        const tr = document.createElement("tr");
-
-        const label = document.createElement("td");
-        label.className = "period-label";
-        label.textContent = `${period}限`;
-
-        const cell = document.createElement("td");
-        cell.id = `today-period-${period}`;
-
-        tr.appendChild(label);
-        tr.appendChild(cell);
-
-        tbody.appendChild(tr);
-      }
-
-      // 今日の曜日に該当する授業だけを表示する
-      lessons.forEach(lesson => {
-        if (lesson.day !== selectedDay || !lesson.period) {
-          return;
-        }
-
-        const cell = document.getElementById(
-          `today-period-${lesson.period}`
-        );
-
-        if (!cell) {
-          return;
-        }
-
-        if (cell.textContent) {
-          cell.textContent += " / " + lesson.name;
-        } else {
-          cell.textContent = lesson.name;
-        }
-
-        cell.classList.add("has-lesson");
-      });
+      lessons = lessons.filter(item => item.id !== lesson.id);
+      saveLessons();
+      if (editingLessonId === lesson.id) resetLessonForm();
+      render();
     }
 
-  		// 授業ごとの累計出席率を計算して表示する
-function renderAttendanceRates() {
-  const root = document.getElementById("attendanceRates");
-  if (!root) return;
+    function lessonTimeLabel(lesson) {
+      return [
+        lesson.day || "曜日未設定",
+        lesson.period ? lesson.period + "限" : "時限未設定"
+      ].join("・");
+    }
 
-  root.replaceChildren();
-
-  if (lessons.length === 0) {
-    root.textContent = "授業を登録してください。";
-    return;
-  }
-
-  const allRecords = getAllRecords();
-  const selectedDate = new Date(dateInput.value + "T12:00:00");
-  const semesterStart = new Date("2026-09-25T12:00:00");
-  const semesterEnd = new Date("2027-01-08T12:00:00");
-
-  lessons.forEach(lesson => {
-    let attended = 0;
-    let absent = 0;
-    let late = 0;
-
-    Object.entries(allRecords).forEach(([date, dayRecords]) => {
-      const classDate = new Date(date + "T12:00:00");
-
-      // 学期開始前・選択日より後の記録は無視する
-      if (classDate < semesterStart || classDate > selectedDate) {
-        return;
-      }
-
-      // 冬休み中の記録は無視する
-      if (date >= "2026-12-26" && date <= "2027-01-03") {
-        return;
-      }
-
-      const status = dayRecords[lesson.id];
-
-      if (status === "出席") attended++;
-      if (status === "欠席") absent++;
-      if (status === "遅刻") late++;
-    });
-
-    const total = attended + absent + late;
-    const attendanceCount = attended + late;
-
-    const rate = total > 0
-      ? Math.floor(attendanceCount / total * 100)
-      : null;
-
-    const p = document.createElement("p");
-    p.style.margin = "8px 0";
-
-    p.textContent = total > 0
-      ? `${lesson.name}：出席 ${attended}回・遅刻 ${late}回・欠席 ${absent}回｜出席率 ${rate}%`
-      : `${lesson.name}：まだ記録がありません`;
-
-    root.appendChild(p);
-  });
-}
-
-    // 出席管理画面を更新する
-    function render() {
+    function renderClasses() {
       const records = getRecordsForDate();
       const root = document.getElementById("classes");
-
       root.replaceChildren();
 
-      const selectedDate = new Date(
-        dateInput.value + "T12:00:00"
-      );
+      const selectedDate = parseDate(dateInput.value);
+      const selectedDay = selectedDayName();
 
       document.getElementById("summaryHeading").textContent =
-        `${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日の記録`;
+        `🎓 ${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日の出席`;
 
-      // 選択した日付の曜日を取得する
-			const dayNames = [
-  			"日曜日",
-  			"月曜日",
-  			"火曜日",
-  			"水曜日",
-  			"木曜日",
-  			"金曜日",
-  			"土曜日"
-			];
+      const lessonsForDay = lessons
+        .filter(lesson => lesson.day === selectedDay)
+        .sort((a, b) => (Number(a.period) || 99) - (Number(b.period) || 99));
 
-			const selectedDay = dayNames[selectedDate.getDay()];
+      lessonsForDay.forEach(lesson => {
+        const current = records[lesson.id] || "";
+        const card = makeEl("section", "card");
 
-			// 選択した曜日の授業だけ表示する
-			lessons
-  			.filter(lesson => lesson.day === selectedDay)
-  			.forEach(lesson => {
-    			const current = records[lesson.id] || "";
-
-    	  const card = document.createElement("section");
-    	  card.className = "card";
-
-        const title = document.createElement("h2");
-        title.textContent = lesson.name;
-
-        const time = document.createElement("p");
-        time.className = "lesson-time";
-
-        time.textContent = [
-          lesson.day || "曜日未設定",
-          lesson.period ? lesson.period + "限" : "時限未設定"
-        ].join("・");
-
-        const status = document.createElement("p");
-        status.className = "status";
-        status.textContent = "記録：" + (current || "未記録");
-
-        const attendanceButtons = document.createElement("div");
-        attendanceButtons.className = "buttons";
-
-        [
-          ["出席", "出席"],
-          ["欠席", "欠席"],
-          ["遅刻", "遅刻"],
-          ["取り消し", ""]
-        ].forEach(([label, value]) => {
-          const button = document.createElement("button");
-          button.textContent = label;
-
-          if (value !== "" && current === value) {
-            button.className = "selected";
-          }
-
-          button.addEventListener("click", () => {
-            saveRecord(lesson.id, value);
-          });
-
+        const attendanceButtons = makeEl("div", "buttons");
+        [["出席", "出席"], ["欠席", "欠席"], ["遅刻", "遅刻"], ["取り消し", ""]].forEach(([label, value]) => {
+          const button = makeEl("button", value !== "" && current === value ? "selected" : "", label);
+          button.addEventListener("click", () => saveRecord(lesson.id, value));
           attendanceButtons.appendChild(button);
         });
 
-        // 編集・削除ボタン
-        const editButtons = document.createElement("div");
-        editButtons.className = "buttons";
-        editButtons.style.marginTop = "12px";
-
-        const editButton = document.createElement("button");
-        editButton.textContent = "授業を編集";
-
-        editButton.addEventListener("click", () => {
-          startEditingLesson(lesson);
-        });
-
-        const deleteButton = document.createElement("button");
-        deleteButton.textContent = "授業を削除";
-        deleteButton.className = "danger";
-
-        deleteButton.addEventListener("click", () => {
-          const confirmed = confirm(
-            `「${lesson.name}」を削除しますか？\nこの授業は一覧から消えます。`
-          );
-
-          if (!confirmed) {
-            return;
-          }
-
-          lessons = lessons.filter(
-            item => item.id !== lesson.id
-          );
-
-          saveLessons();
-
-          if (editingLessonId === lesson.id) {
-            resetLessonForm();
-          }
-
-          render();
-        });
-
-        editButtons.append(editButton, deleteButton);
-
         card.append(
-          title,
-          time,
-          status,
-          attendanceButtons,
-          editButtons
+          makeEl("h2", "", lesson.name),
+          makeEl("p", "lesson-time", lessonTimeLabel(lesson)),
+          makeEl("p", "status", "記録：" + (current || "未記録")),
+          attendanceButtons
         );
 
         root.appendChild(card);
       });
 
-      // 出席状況を集計する
-      const values = Object.values(records).filter(
-        value => ["出席", "欠席", "遅刻"].includes(value)
-      );
+      // この日の集計（この曜日の授業だけ）
+      const statuses = lessonsForDay.map(lesson => records[lesson.id]);
+      const attended = statuses.filter(s => s === "出席" || s === "遅刻").length;
+      const absent = statuses.filter(s => s === "欠席").length;
+      const unrecorded = statuses.filter(s => !["出席", "欠席", "遅刻"].includes(s)).length;
 
-      const attended = values.filter(
-        value => value === "出席" || value === "遅刻"
-      ).length;
+      document.getElementById("summaryText").textContent = lessonsForDay.length
+        ? `出席・遅刻：${attended}　欠席：${absent}　未記録：${unrecorded}`
+        : `${selectedDay}の授業はありません。`;
 
-      const absent = values.filter(
-        value => value === "欠席"
-      ).length;
+      // 登録している授業の一覧（編集・削除はここから）
+      const all = document.getElementById("allLessons");
+      all.replaceChildren();
 
-      const unrecorded = Math.max(
-        0,
-        lessons.length - values.length
-      );
+      if (lessons.length === 0) {
+        all.appendChild(makeEl("p", "empty", "授業を登録してください。"));
+      }
 
-      document.getElementById("summaryText").textContent =
-  		`出席・遅刻：${attended}　欠席：${absent}　未記録：${unrecorded}`;
+      const dayOrder = ["月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日", "日曜日", ""];
+      [...lessons]
+        .sort((a, b) =>
+          dayOrder.indexOf(a.day || "") - dayOrder.indexOf(b.day || "") ||
+          (Number(a.period) || 99) - (Number(b.period) || 99)
+        )
+        .forEach(lesson => {
+          const row = makeEl("div", "money-item");
+          const main = makeEl("div", "money-main", lesson.name);
+          main.appendChild(makeEl("span", "money-cat", lessonTimeLabel(lesson)));
 
-		renderAttendanceRates();
-		renderTimetable();
-  		  }
+          const editButton = makeEl("button", "small", "編集");
+          editButton.addEventListener("click", () => startEditingLesson(lesson));
 
-    // 授業の追加・編集を保存する
+          const deleteButton = makeEl("button", "small danger", "削除");
+          deleteButton.addEventListener("click", () => deleteLesson(lesson));
+
+          row.append(main, editButton, deleteButton);
+          all.appendChild(row);
+        });
+    }
+
+    // この日の曜日の時間割
+    function renderTimetable() {
+      const tbody = document.getElementById("timetableBody");
+      const header = document.getElementById("timetableHeader");
+      const selectedDay = selectedDayName();
+
+      tbody.replaceChildren();
+      header.replaceChildren(makeEl("th", "", "時限"), makeEl("th", "", selectedDay));
+
+      for (let period = 1; period <= 7; period++) {
+        const tr = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.id = `today-period-${period}`;
+        tr.append(makeEl("td", "period-label", `${period}限`), cell);
+        tbody.appendChild(tr);
+      }
+
+      lessons.forEach(lesson => {
+        if (lesson.day !== selectedDay || !lesson.period) return;
+
+        const cell = document.getElementById(`today-period-${lesson.period}`);
+        if (!cell) return;
+
+        cell.textContent = cell.textContent ? cell.textContent + " / " + lesson.name : lesson.name;
+        cell.classList.add("has-lesson");
+      });
+    }
+
+    // 授業ごとの累計出席率
+    function renderAttendanceRates() {
+      const root = document.getElementById("attendanceRates");
+      root.replaceChildren();
+
+      if (lessons.length === 0) {
+        root.textContent = "授業を登録してください。";
+        return;
+      }
+
+      const allRecords = getAllRecords();
+      const selected = dateInput.value;
+      const semesterStart = "2026-09-25";
+
+      lessons.forEach(lesson => {
+        let attended = 0;
+        let absent = 0;
+        let late = 0;
+
+        Object.entries(allRecords).forEach(([date, dayRecords]) => {
+          // 学期開始前・選択日より後の記録は無視する
+          if (date < semesterStart || date > selected) return;
+
+          // 冬休み中の記録は無視する
+          if (date >= "2026-12-26" && date <= "2027-01-03") return;
+
+          const status = dayRecords[lesson.id];
+          if (status === "出席") attended++;
+          if (status === "欠席") absent++;
+          if (status === "遅刻") late++;
+        });
+
+        const total = attended + absent + late;
+        const rate = total > 0 ? Math.floor(((attended + late) / total) * 100) : null;
+
+        root.appendChild(
+          makeEl(
+            "p",
+            "",
+            total > 0
+              ? `${lesson.name}：出席 ${attended}回・遅刻 ${late}回・欠席 ${absent}回｜出席率 ${rate}%`
+              : `${lesson.name}：まだ記録がありません`
+          )
+        );
+      });
+    }
+
     lessonForm.addEventListener("submit", event => {
       event.preventDefault();
 
       const name = nameInput.value.trim();
-
       if (!name) {
         alert("授業名を入力してください。");
         return;
       }
 
-      if (editingLessonId !== null) {
-        // 既存の授業を編集する
-        lessons = lessons.map(lesson =>
-          lesson.id === editingLessonId
-            ? {
-                ...lesson,
-                name,
-                day: dayInput.value,
-                period: periodInput.value
-              }
-            : lesson
-        );
-      } else {
-        // 新しい授業を追加する
-        const newId = lessons.reduce(
-          (max, lesson) =>
-            Math.max(max, Number(lesson.id) || 0),
-          0
-        ) + 1;
+      const data = { name, day: dayInput.value, period: periodInput.value };
 
-        lessons.push({
-          id: newId,
-          name,
-          day: dayInput.value,
-          period: periodInput.value
-        });
+      if (editingLessonId !== null) {
+        lessons = lessons.map(lesson => (lesson.id === editingLessonId ? { ...lesson, ...data } : lesson));
+      } else {
+        lessons.push({ id: nextId(lessons), ...data });
       }
 
       saveLessons();
@@ -748,16 +1701,221 @@ function renderAttendanceRates() {
       render();
     });
 
-    // 編集をキャンセルする
-    cancelEditButton.addEventListener(
-      "click",
-      resetLessonForm
-    );
+    cancelEditButton.addEventListener("click", resetLessonForm);
 
-    // 記録する日付が変更されたら画面を更新する
-    dateInput.addEventListener("change", render);
+    // =========================================================
+    // 家計簿
+    // =========================================================
+    const CATEGORIES = {
+      支出: ["食費", "交通費", "日用品", "娯楽", "交際費", "教材・学費", "服・美容", "通信費", "その他"],
+      収入: ["バイト", "仕送り", "おこづかい", "その他"]
+    };
 
-    // 最初の画面を表示する
+    const moneyForm = document.getElementById("moneyForm");
+    const moneyAmountInput = document.getElementById("moneyAmount");
+    const moneyCategoryInput = document.getElementById("moneyCategory");
+    const moneyMemoInput = document.getElementById("moneyMemo");
+    const typeButtons = document.querySelectorAll(".type-switch button");
+
+    let moneyType = "支出";
+
+    function setMoneyType(type) {
+      moneyType = type;
+      typeButtons.forEach(button => {
+        button.classList.toggle("selected", button.dataset.type === type);
+      });
+      moneyCategoryInput.replaceChildren(
+        ...CATEGORIES[type].map(category => {
+          const option = document.createElement("option");
+          option.value = category;
+          option.textContent = category;
+          return option;
+        })
+      );
+    }
+
+    typeButtons.forEach(button => {
+      button.addEventListener("click", () => setMoneyType(button.dataset.type));
+    });
+
+    setMoneyType("支出");
+
+    function saveMoney() {
+      saveJSON(moneyStorageKey, money);
+    }
+
+    function renderMoney() {
+      const date = dateInput.value;
+      const month = date.slice(0, 7);
+      const selected = parseDate(date);
+
+      document.getElementById("monthHeading").textContent =
+        `💴 ${selected.getFullYear()}年${selected.getMonth() + 1}月`;
+
+      const monthItems = money.filter(item => item.date.slice(0, 7) === month);
+      const income = monthItems.filter(i => i.type === "収入").reduce((s, i) => s + i.amount, 0);
+      const expense = monthItems.filter(i => i.type === "支出").reduce((s, i) => s + i.amount, 0);
+      const balance = income - expense;
+
+      document.getElementById("monthIncome").textContent = yen(income);
+      document.getElementById("monthExpense").textContent = yen(expense);
+
+      const balanceEl = document.getElementById("monthBalance");
+      balanceEl.textContent = (balance < 0 ? "-" : "") + yen(Math.abs(balance));
+      balanceEl.className = balance < 0 ? "expense" : "income";
+
+      // 予算
+      const budgetText = document.getElementById("budgetText");
+      const budgetWrap = document.getElementById("budgetProgressWrap");
+      const budgetInput = document.getElementById("budgetInput");
+
+      if (document.activeElement !== budgetInput) {
+        budgetInput.value = monthlyBudget || "";
+      }
+
+      if (monthlyBudget > 0) {
+        const left = monthlyBudget - expense;
+        budgetText.textContent = left >= 0
+          ? `予算 ${yen(monthlyBudget)} のうち 残り ${yen(left)}`
+          : `予算 ${yen(monthlyBudget)} を ${yen(-left)} オーバー`;
+        budgetWrap.classList.remove("hidden");
+        budgetWrap.classList.toggle("over", left < 0);
+        document.getElementById("budgetProgress").style.width =
+          `${Math.min(100, (expense / monthlyBudget) * 100)}%`;
+      } else {
+        budgetText.textContent = "1か月の予算を決めると、残りがわかります。";
+        budgetWrap.classList.add("hidden");
+      }
+
+      // 支出の内訳
+      const breakdown = document.getElementById("categoryBreakdown");
+      breakdown.replaceChildren();
+
+      const byCategory = {};
+      monthItems
+        .filter(item => item.type === "支出")
+        .forEach(item => {
+          byCategory[item.category] = (byCategory[item.category] || 0) + item.amount;
+        });
+
+      const sorted = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+
+      if (sorted.length === 0) {
+        breakdown.appendChild(makeEl("p", "empty", "今月の支出はまだありません。"));
+      }
+
+      const max = sorted.length ? sorted[0][1] : 0;
+      sorted.forEach(([category, amount]) => {
+        const row = makeEl("div", "category-row");
+        const bar = makeEl("div", "category-bar");
+        const fill = document.createElement("div");
+        fill.style.width = `${(amount / max) * 100}%`;
+        bar.appendChild(fill);
+        row.append(makeEl("span", "", category), bar, makeEl("span", "", yen(amount)));
+        breakdown.appendChild(row);
+      });
+
+      // この日の記録
+      document.getElementById("moneyDayHeading").textContent = `🧾 ${formatDateLabel(date)}の記録`;
+
+      const list = document.getElementById("moneyList");
+      list.replaceChildren();
+
+      const dayItems = money.filter(item => item.date === date);
+      if (dayItems.length === 0) {
+        list.appendChild(makeEl("p", "empty", "この日の記録はありません。"));
+      }
+
+      dayItems.forEach(item => {
+        const row = makeEl("div", "money-item");
+        const main = makeEl("div", "money-main", item.memo || item.category);
+        main.appendChild(makeEl("span", "money-cat", `${item.type}・${item.category}`));
+
+        const amount = makeEl(
+          "span",
+          "money-amount " + (item.type === "収入" ? "income" : "expense"),
+          (item.type === "収入" ? "+" : "-") + yen(item.amount)
+        );
+
+        const deleteButton = makeEl("button", "icon-button", "✕");
+        deleteButton.type = "button";
+        deleteButton.setAttribute("aria-label", "この記録を削除");
+        deleteButton.addEventListener("click", () => {
+          if (!confirm("この記録を削除しますか？")) return;
+          money = money.filter(m => m.id !== item.id);
+          saveMoney();
+          render();
+        });
+
+        row.append(main, amount, deleteButton);
+        list.appendChild(row);
+      });
+    }
+
+    moneyForm.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const amount = Math.round(Number(moneyAmountInput.value));
+      if (!amount || amount <= 0) {
+        alert("金額を入力してください。");
+        return;
+      }
+
+      money.push({
+        id: nextId(money),
+        date: dateInput.value,
+        type: moneyType,
+        amount,
+        category: moneyCategoryInput.value,
+        memo: moneyMemoInput.value.trim()
+      });
+
+      saveMoney();
+      moneyAmountInput.value = "";
+      moneyMemoInput.value = "";
+      render();
+    });
+
+    document.getElementById("budgetForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const input = document.getElementById("budgetInput");
+      monthlyBudget = Math.max(0, Math.round(Number(input.value) || 0));
+      saveJSON(budgetStorageKey, monthlyBudget);
+      input.blur();
+      render();
+    });
+
+    // =========================================================
+    // 画面全体の更新
+    // =========================================================
+    function render() {
+      renderOverview();
+      renderTodos();
+      renderHabits();
+      renderEvents();
+      renderClasses();
+      renderTimetable();
+      renderAttendanceRates();
+      renderMoney();
+    }
+
+    function moveDate(days) {
+      dateInput.value = addDays(dateInput.value || localDateString(), days);
+      render();
+    }
+
+    document.getElementById("prevDay").addEventListener("click", () => moveDate(-1));
+    document.getElementById("nextDay").addEventListener("click", () => moveDate(1));
+    document.getElementById("todayButton").addEventListener("click", () => {
+      dateInput.value = localDateString();
+      render();
+    });
+
+    dateInput.addEventListener("change", () => {
+      if (!dateInput.value) dateInput.value = localDateString();
+      render();
+    });
+
     render();
   </script>
 </body>
