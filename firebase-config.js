@@ -16,4 +16,12 @@
 //
 // null のままだと、クラウド同期なし（この端末だけに保存）で動きます。
 
-export const firebaseConfig = null;
+export const firebaseConfig = {
+  apiKey: "AIzaSyDYHcUl6q-uPhQ8Agxb712erH9F3gV0GSQ",
+  authDomain: "kalender-abab5.firebaseapp.com",
+  projectId: "kalender-abab5",
+  storageBucket: "kalender-abab5.firebasestorage.app",
+  messagingSenderId: "260875711244",
+  appId: "1:260875711244:web:c0cc4a8eafc3db86e94f29",
+  measurementId: "G-KPQ5RSQG5B"
+};
