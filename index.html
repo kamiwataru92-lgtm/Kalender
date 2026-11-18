@@ -598,6 +598,60 @@
       font-size: 12px;
       margin: 30px 0;
     }
+
+    /* ---- クラウド同期 ---- */
+    .sync-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: white;
+      border-radius: 12px;
+      padding: 8px 10px 8px 14px;
+      margin: 4px 0 2px;
+      box-shadow: 0 3px 12px #00000008;
+    }
+
+    .sync-text {
+      flex: 1;
+      min-width: 0;
+      font-size: 13px;
+      color: #687386;
+      overflow-wrap: anywhere;
+    }
+
+    dialog {
+      border: none;
+      border-radius: 14px;
+      padding: 20px;
+      max-width: 400px;
+      width: calc(100% - 32px);
+      color: inherit;
+    }
+
+    dialog::backdrop {
+      background: #20283a66;
+    }
+
+    .dialog-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .dialog-buttons button {
+      text-align: left;
+      font-weight: bold;
+    }
+
+    .dialog-buttons button span {
+      display: block;
+      font-weight: normal;
+      font-size: 12px;
+      margin-top: 2px;
+      opacity: 0.8;
+    }
   </style>
 </head>
 
@@ -605,7 +659,30 @@
   <header>
     <h1>📚 Kalender</h1>
     <p class="description">毎日の生活と大学をまとめて管理しよう。</p>
+
+    <div class="sync-bar hidden" id="syncBar">
+      <span class="sync-text" id="syncText">☁️ ログインするとスマホとPCで同期できます</span>
+      <button type="button" class="small primary" id="loginButton">Googleでログイン</button>
+      <button type="button" class="small hidden" id="logoutButton">ログアウト</button>
+    </div>
   </header>
+
+  <dialog id="syncChoice">
+    <h2>☁️ どちらのデータを使いますか？</h2>
+    <p class="muted">
+      クラウドにはすでに記録があり、この端末にも別の記録があります。
+    </p>
+    <div class="dialog-buttons">
+      <button type="button" class="primary" value="download">
+        クラウドのデータを使う（おすすめ）
+        <span>この端末の記録は控えを残して置き換えます</span>
+      </button>
+      <button type="button" value="upload">
+        この端末のデータでクラウドを上書き
+        <span>ほかの端末の記録が置き換わります</span>
+      </button>
+    </div>
+  </dialog>
 
   <main>
     <!-- 全タブ共通の日付 -->
@@ -901,11 +978,20 @@
       }
     }
 
+    // クラウド同期（ログイン中だけ下の module スクリプトが設定する）
+    let cloudSaver = null;
+
     function saveJSON(key, value) {
+      const json = JSON.stringify(value);
+
       try {
-        localStorage.setItem(key, JSON.stringify(value));
+        localStorage.setItem(key, json);
       } catch (error) {
         console.error(`${key} の保存に失敗しました`, error);
+      }
+
+      if (cloudSaver && SYNC_KEYS.includes(key)) {
+        cloudSaver(key, json);
       }
     }
 
@@ -1015,24 +1101,47 @@
       { id: 3, name: "情報リテラシー", day: "", period: "" }
     ];
 
-    let lessons = loadJSON(lessonsStorageKey, null);
-    if (!Array.isArray(lessons)) {
-      lessons = defaultLessons.map(lesson => ({ ...lesson }));
-      saveJSON(lessonsStorageKey, lessons);
+    // クラウドと同期するデータ（タブの記憶などは端末ごと）
+    const SYNC_KEYS = [
+      lessonsStorageKey,
+      attendanceStorageKey,
+      eventsStorageKey,
+      todosStorageKey,
+      habitsStorageKey,
+      habitLogStorageKey,
+      moneyStorageKey,
+      budgetStorageKey
+    ];
+
+    let lessons, events, todos, habits, habitLog, money, monthlyBudget;
+
+    // localStorage から全データを読み直す
+    function loadState() {
+      lessons = loadJSON(lessonsStorageKey, null);
+      if (!Array.isArray(lessons)) {
+        lessons = defaultLessons.map(lesson => ({ ...lesson }));
+        try {
+          localStorage.setItem(lessonsStorageKey, JSON.stringify(lessons));
+        } catch (error) {
+          // 保存できなくても表示はできる
+        }
+      }
+
+      events = loadJSON(eventsStorageKey, []);
+      todos = loadJSON(todosStorageKey, []);
+      habits = loadJSON(habitsStorageKey, []);
+      habitLog = loadJSON(habitLogStorageKey, {}); // { "2026-11-18": [習慣id, ...] }
+      money = loadJSON(moneyStorageKey, []);
+      monthlyBudget = Number(loadJSON(budgetStorageKey, 0)) || 0;
+
+      if (!Array.isArray(events)) events = [];
+      if (!Array.isArray(todos)) todos = [];
+      if (!Array.isArray(habits)) habits = [];
+      if (!Array.isArray(money)) money = [];
+      if (typeof habitLog !== "object" || Array.isArray(habitLog)) habitLog = {};
     }
 
-    let events = loadJSON(eventsStorageKey, []);
-    let todos = loadJSON(todosStorageKey, []);
-    let habits = loadJSON(habitsStorageKey, []);
-    let habitLog = loadJSON(habitLogStorageKey, {}); // { "2026-11-18": [習慣id, ...] }
-    let money = loadJSON(moneyStorageKey, []);
-    let monthlyBudget = Number(loadJSON(budgetStorageKey, 0)) || 0;
-
-    if (!Array.isArray(events)) events = [];
-    if (!Array.isArray(todos)) todos = [];
-    if (!Array.isArray(habits)) habits = [];
-    if (!Array.isArray(money)) money = [];
-    if (typeof habitLog !== "object" || Array.isArray(habitLog)) habitLog = {};
+    loadState();
 
     // =========================================================
     // 生活：今日のまとめ
@@ -1917,6 +2026,77 @@
     });
 
     render();
+
+    // =========================================================
+    // クラウド同期用の窓口（firebase-sync.js から使う）
+    // =========================================================
+    function getLocalRaw(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (error) {
+        return null;
+      }
+    }
+
+    window.Kalender = {
+      SYNC_KEYS,
+
+      getLocal: getLocalRaw,
+
+      setCloudSaver(fn) {
+        cloudSaver = fn;
+      },
+
+      // この端末に「意味のある」記録があるか（初期状態の授業だけなら false）
+      hasLocalData() {
+        if (todos.length || events.length || habits.length || money.length) return true;
+        if (Object.keys(habitLog).length || monthlyBudget > 0) return true;
+        if (Object.keys(getAllRecords()).length) return true;
+        return JSON.stringify(lessons) !== JSON.stringify(defaultLessons);
+      },
+
+      // クラウドで置き換える前に、この端末のデータを控えておく
+      backupLocal() {
+        const backup = { savedAt: new Date().toISOString(), data: {} };
+        SYNC_KEYS.forEach(key => {
+          const raw = getLocalRaw(key);
+          if (raw !== null) backup.data[key] = raw;
+        });
+        try {
+          localStorage.setItem("kalender-local-backup-v1", JSON.stringify(backup));
+        } catch (error) {
+          console.error("バックアップに失敗しました", error);
+        }
+      },
+
+      // クラウドのデータを取り込む（{ key: json文字列 or null }）
+      applyRemote(changes) {
+        let changed = false;
+
+        Object.entries(changes).forEach(([key, json]) => {
+          if (!SYNC_KEYS.includes(key) || getLocalRaw(key) === json) return;
+
+          try {
+            if (json === null) {
+              localStorage.removeItem(key);
+            } else {
+              localStorage.setItem(key, json);
+            }
+            changed = true;
+          } catch (error) {
+            console.error(`${key} の取り込みに失敗しました`, error);
+          }
+        });
+
+        if (changed) {
+          loadState();
+          render();
+        }
+      }
+    };
   </script>
+
+  <!-- クラウド同期（firebase-config.js に設定があるときだけ動く） -->
+  <script type="module" src="firebase-sync.js"></script>
 </body>
 </html>
