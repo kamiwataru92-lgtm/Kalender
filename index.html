@@ -599,6 +599,107 @@
       margin: 30px 0;
     }
 
+    /* ---- 晩ごはん ---- */
+    .field-label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .choice-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .choice-row button {
+      flex: 1;
+    }
+
+    button.wide {
+      width: 100%;
+      padding: 13px;
+      font-size: 15px;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    #dinnerStatus:empty {
+      display: none;
+    }
+
+    #dinnerStatus.error {
+      color: #b42318;
+    }
+
+    .dinner-card {
+      border: 1px solid #e3e8f8;
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 12px;
+    }
+
+    .dinner-card.chosen {
+      background: #f5f7ff;
+      border-color: #3659d9;
+      margin: 0 0 14px;
+    }
+
+    .dinner-name {
+      font-size: 17px;
+      font-weight: bold;
+      margin: 0 0 4px;
+      overflow-wrap: anywhere;
+    }
+
+    .dinner-meta {
+      font-size: 13px;
+      color: #3659d9;
+      font-weight: bold;
+      margin: 0 0 6px;
+    }
+
+    .dinner-reason {
+      font-size: 13px;
+      color: #687386;
+      margin: 0 0 8px;
+    }
+
+    .dinner-ingredients {
+      font-size: 13px;
+      margin: 4px 0;
+      overflow-wrap: anywhere;
+    }
+
+    .dinner-ingredients b {
+      display: inline-block;
+      min-width: 5.5em;
+      margin-right: 6px;
+    }
+
+    .dinner-card details {
+      margin: 8px 0 10px;
+      font-size: 14px;
+    }
+
+    .dinner-card summary {
+      cursor: pointer;
+      color: #3659d9;
+      font-size: 13px;
+    }
+
+    .dinner-card ol {
+      margin: 8px 0 0;
+      padding-left: 1.4em;
+    }
+
+    .dinner-card li {
+      margin-bottom: 4px;
+    }
+
     /* ---- クラウド同期 ---- */
     .sync-bar {
       display: flex;
@@ -738,6 +839,42 @@
           >
           <button class="primary" type="submit">追加</button>
         </form>
+      </section>
+
+      <section class="summary" id="dinnerBox">
+        <h2 id="dinnerHeading">🍳 晩ごはん</h2>
+
+        <div id="dinnerChosen"></div>
+
+        <form id="dinnerForm">
+          <label for="dinnerFridge">冷蔵庫にあるもの（任意）</label>
+          <input
+            id="dinnerFridge"
+            type="text"
+            maxlength="200"
+            placeholder="例：卵、玉ねぎ、鶏むね肉、キャベツ半分"
+          >
+
+          <span class="field-label">かけられる時間</span>
+          <div class="choice-row" id="dinnerTime">
+            <button type="button" data-value="15分以内">15分</button>
+            <button type="button" data-value="30分くらい" class="selected">30分</button>
+            <button type="button" data-value="1時間くらいまでOK">じっくり</button>
+          </div>
+
+          <label for="dinnerMood">気分・リクエスト（任意）</label>
+          <input
+            id="dinnerMood"
+            type="text"
+            maxlength="100"
+            placeholder="例：さっぱり、節約、がっつり肉、洗い物少なめ"
+          >
+
+          <button class="primary wide" type="submit" id="dinnerButton">🤖 Geminiに考えてもらう</button>
+        </form>
+
+        <p class="muted" id="dinnerStatus" role="status"></p>
+        <div id="dinnerResults"></div>
       </section>
     </div>
 
@@ -1094,6 +1231,7 @@
     const habitLogStorageKey = "kalender-habit-log-v1";
     const moneyStorageKey = "kalender-money-v1";
     const budgetStorageKey = "kalender-budget-v1";
+    const dinnerStorageKey = "kalender-dinner-v1";
 
     const defaultLessons = [
       { id: 1, name: "国際経済学", day: "", period: "" },
@@ -1110,10 +1248,11 @@
       habitsStorageKey,
       habitLogStorageKey,
       moneyStorageKey,
-      budgetStorageKey
+      budgetStorageKey,
+      dinnerStorageKey
     ];
 
-    let lessons, events, todos, habits, habitLog, money, monthlyBudget;
+    let lessons, events, todos, habits, habitLog, money, monthlyBudget, dinnerLog;
 
     // localStorage から全データを読み直す
     function loadState() {
@@ -1133,6 +1272,8 @@
       habitLog = loadJSON(habitLogStorageKey, {}); // { "2026-11-18": [習慣id, ...] }
       money = loadJSON(moneyStorageKey, []);
       monthlyBudget = Number(loadJSON(budgetStorageKey, 0)) || 0;
+      dinnerLog = loadJSON(dinnerStorageKey, {}); // { "2026-11-18": { name, minutes, ... } }
+      if (typeof dinnerLog !== "object" || Array.isArray(dinnerLog)) dinnerLog = {};
 
       if (!Array.isArray(events)) events = [];
       if (!Array.isArray(todos)) todos = [];
@@ -1995,6 +2136,323 @@
     });
 
     // =========================================================
+    // 晩ごはん（Gemini）
+    // =========================================================
+    const dinnerFormStorageKey = "kalender-dinner-form-v1"; // 入力内容（端末ごと）
+    const dinnerLastStorageKey = "kalender-dinner-last-v1"; // 直近の提案（端末ごと）
+
+    const dinnerForm = document.getElementById("dinnerForm");
+    const dinnerFridgeInput = document.getElementById("dinnerFridge");
+    const dinnerMoodInput = document.getElementById("dinnerMood");
+    const dinnerButton = document.getElementById("dinnerButton");
+    const dinnerStatus = document.getElementById("dinnerStatus");
+    const dinnerTimeButtons = document.querySelectorAll("#dinnerTime button");
+
+    let dinnerTime = "30分くらい";
+    let dinnerLoading = false;
+
+    // 前回の入力を戻す
+    (() => {
+      const saved = loadJSON(dinnerFormStorageKey, {});
+      if (saved && typeof saved === "object") {
+        dinnerFridgeInput.value = saved.fridge || "";
+        dinnerMoodInput.value = saved.mood || "";
+        if (saved.time) dinnerTime = saved.time;
+      }
+      dinnerTimeButtons.forEach(button => {
+        button.classList.toggle("selected", button.dataset.value === dinnerTime);
+      });
+    })();
+
+    function saveDinnerForm() {
+      saveJSON(dinnerFormStorageKey, {
+        fridge: dinnerFridgeInput.value.trim(),
+        mood: dinnerMoodInput.value.trim(),
+        time: dinnerTime
+      });
+    }
+
+    dinnerTimeButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        dinnerTime = button.dataset.value;
+        dinnerTimeButtons.forEach(b => b.classList.toggle("selected", b === button));
+        saveDinnerForm();
+      });
+    });
+
+    dinnerFridgeInput.addEventListener("change", saveDinnerForm);
+    dinnerMoodInput.addEventListener("change", saveDinnerForm);
+
+    // AI の返事を、表示できる形に整える
+    function cleanSuggestion(raw) {
+      const text = value => (typeof value === "string" ? value.trim() : "");
+      const list = value =>
+        Array.isArray(value) ? value.map(text).filter(Boolean).slice(0, 12) : [];
+      const number = value => (Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : null);
+
+      return {
+        name: text(raw?.name).slice(0, 60),
+        minutes: number(raw?.minutes),
+        costYen: number(raw?.costYen),
+        reason: text(raw?.reason).slice(0, 200),
+        haveIngredients: list(raw?.haveIngredients),
+        buyIngredients: list(raw?.buyIngredients),
+        steps: list(raw?.steps)
+      };
+    }
+
+    // その日の状況から、Gemini への頼み方を作る
+    function buildDinnerPrompt() {
+      const date = dateInput.value;
+      const lines = [];
+
+      lines.push(`日付：${formatDateLabel(date)}`);
+
+      // その日の予定と授業（忙しさの目安）
+      const dayEvents = events.filter(item => item.date === date).sort(compareEvents);
+      if (dayEvents.length) {
+        lines.push("この日の予定：" + dayEvents.map(e => (e.time ? `${e.time} ` : "") + e.title).join("、"));
+      }
+
+      const dayLessons = lessons.filter(lesson => lesson.day === selectedDayName());
+      if (dayLessons.length) {
+        const lastPeriod = Math.max(...dayLessons.map(l => Number(l.period) || 0));
+        lines.push(`この日の授業：${dayLessons.length}コマ` + (lastPeriod ? `（最後は${lastPeriod}限）` : ""));
+      }
+
+      // 最近食べたもの（かぶらないように）
+      const recent = [];
+      for (let i = 1; i <= 7; i++) {
+        const meal = dinnerLog[addDays(date, -i)];
+        if (meal?.name) recent.push(meal.name);
+      }
+      if (recent.length) {
+        lines.push("最近の晩ごはん（なるべくかぶらないように）：" + recent.join("、"));
+      }
+
+      // お金の状況
+      const month = date.slice(0, 7);
+      const monthExpense = money
+        .filter(item => item.type === "支出" && item.date.slice(0, 7) === month)
+        .reduce((sum, item) => sum + item.amount, 0);
+      if (monthlyBudget > 0) {
+        const selected = parseDate(date);
+        const lastDay = new Date(selected.getFullYear(), selected.getMonth() + 1, 0).getDate();
+        const daysLeft = lastDay - selected.getDate() + 1;
+        const left = monthlyBudget - monthExpense;
+        lines.push(
+          left > 0
+            ? `今月の残り予算：${left}円（月末まで${daysLeft}日、1日あたり約${Math.floor(left / daysLeft)}円）`
+            : "今月の予算はもうオーバーしているので、できるだけ節約したい"
+        );
+      }
+
+      const fridge = dinnerFridgeInput.value.trim();
+      lines.push("冷蔵庫にあるもの：" + (fridge || "（特に指定なし。よくある調味料と米はある）"));
+      lines.push(`かけられる時間：${dinnerTime}`);
+
+      const mood = dinnerMoodInput.value.trim();
+      if (mood) lines.push(`気分・リクエスト：${mood}`);
+
+      return [
+        "あなたは一人暮らしの大学生の晩ごはんを考えるアシスタントです。",
+        "次の状況に合う晩ごはんを3つ提案してください。",
+        "",
+        "条件：",
+        "- 1人分。家庭のキッチンで作れる、現実的で手軽なもの",
+        "- 冷蔵庫にあるものをできるだけ使い、買い足しは少なめに",
+        "- 調理時間は「かけられる時間」に収める。予定や授業が多い日は特に手早く",
+        "- 3つは系統（和・洋・中、ご飯・麺など）を変える",
+        "- 塩・砂糖・醤油・油などの基本調味料と米は、家にある前提でよい（材料に書かなくてよい）",
+        "- 日本語で、短く分かりやすく",
+        "",
+        "状況：",
+        ...lines.map(line => "- " + line)
+      ].join("\n");
+    }
+
+    function setDinnerStatus(text, isError = false) {
+      dinnerStatus.textContent = text;
+      dinnerStatus.classList.toggle("error", isError);
+    }
+
+    function dinnerMetaText(s) {
+      const parts = [];
+      if (s.minutes) parts.push(`⏱ ${s.minutes}分`);
+      parts.push(s.costYen ? `💴 買い足し 約${yen(s.costYen)}` : "💴 買い足しなし");
+      return parts.join("　");
+    }
+
+    function dinnerDetails(s) {
+      const fragment = document.createDocumentFragment();
+
+      if (s.haveIngredients.length) {
+        const p = makeEl("p", "dinner-ingredients");
+        p.append(makeEl("b", "", "🧊 家にある"), document.createTextNode(s.haveIngredients.join("、")));
+        fragment.appendChild(p);
+      }
+
+      if (s.buyIngredients.length) {
+        const p = makeEl("p", "dinner-ingredients");
+        p.append(makeEl("b", "", "🛒 買うもの"), document.createTextNode(s.buyIngredients.join("、")));
+        fragment.appendChild(p);
+      }
+
+      if (s.steps.length) {
+        const details = document.createElement("details");
+        details.appendChild(makeEl("summary", "", "作り方を見る"));
+        const ol = document.createElement("ol");
+        s.steps.forEach(step => ol.appendChild(makeEl("li", "", step)));
+        details.appendChild(ol);
+        fragment.appendChild(details);
+      }
+
+      return fragment;
+    }
+
+    // 買うものを、その日のやることに追加
+    function addShoppingTodo(s) {
+      const text = "🛒 買い物：" + s.buyIngredients.join("、");
+      const date = dateInput.value;
+
+      if (todos.some(todo => todo.date === date && todo.text === text)) {
+        setDinnerStatus("買うものは、もうやることリストに入っています。");
+        return;
+      }
+
+      todos.push({ id: nextId(todos), date, text, done: false });
+      saveTodos();
+      render();
+      setDinnerStatus("買うものを、やることリストに追加しました。");
+    }
+
+    function renderDinner() {
+      const date = dateInput.value;
+      const isToday = date === localDateString();
+
+      document.getElementById("dinnerHeading").textContent =
+        `🍳 ${isToday ? "今日" : formatDateLabel(date)}の晩ごはん`;
+
+      // 決めた晩ごはん
+      const chosenRoot = document.getElementById("dinnerChosen");
+      chosenRoot.replaceChildren();
+
+      const chosen = dinnerLog[date] ? cleanSuggestion(dinnerLog[date]) : null;
+      if (chosen && chosen.name) {
+        const card = makeEl("div", "dinner-card chosen");
+        card.append(
+          makeEl("p", "dinner-meta", "✅ 決定"),
+          makeEl("p", "dinner-name", chosen.name),
+          makeEl("p", "dinner-meta", dinnerMetaText(chosen)),
+          dinnerDetails(chosen)
+        );
+
+        const buttons = makeEl("div", "buttons");
+        if (chosen.buyIngredients.length) {
+          const shop = makeEl("button", "small", "🛒 買うものをやることに追加");
+          shop.type = "button";
+          shop.addEventListener("click", () => addShoppingTodo(chosen));
+          buttons.appendChild(shop);
+        }
+
+        const cancel = makeEl("button", "small danger", "取り消す");
+        cancel.type = "button";
+        cancel.addEventListener("click", () => {
+          delete dinnerLog[date];
+          saveJSON(dinnerStorageKey, dinnerLog);
+          render();
+        });
+        buttons.appendChild(cancel);
+
+        card.appendChild(buttons);
+        chosenRoot.appendChild(card);
+      }
+
+      // 直近の提案（その日の分だけ表示）
+      const resultsRoot = document.getElementById("dinnerResults");
+      resultsRoot.replaceChildren();
+
+      const last = loadJSON(dinnerLastStorageKey, null);
+      if (!last || last.date !== date || !Array.isArray(last.suggestions)) return;
+
+      last.suggestions.map(cleanSuggestion).filter(s => s.name).forEach(s => {
+        const card = makeEl("div", "dinner-card");
+        card.append(makeEl("p", "dinner-name", s.name), makeEl("p", "dinner-meta", dinnerMetaText(s)));
+        if (s.reason) card.appendChild(makeEl("p", "dinner-reason", s.reason));
+        card.appendChild(dinnerDetails(s));
+
+        const buttons = makeEl("div", "buttons");
+
+        const choose = makeEl(
+          "button",
+          "small" + (chosen && chosen.name === s.name ? " selected" : " primary"),
+          chosen && chosen.name === s.name ? "✓ これに決定中" : "これにする"
+        );
+        choose.type = "button";
+        choose.addEventListener("click", () => {
+          dinnerLog[date] = s;
+          saveJSON(dinnerStorageKey, dinnerLog);
+          setDinnerStatus("");
+          render();
+        });
+        buttons.appendChild(choose);
+
+        if (s.buyIngredients.length) {
+          const shop = makeEl("button", "small", "🛒 買うものをやることに追加");
+          shop.type = "button";
+          shop.addEventListener("click", () => addShoppingTodo(s));
+          buttons.appendChild(shop);
+        }
+
+        card.appendChild(buttons);
+        resultsRoot.appendChild(card);
+      });
+    }
+
+    dinnerForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      if (dinnerLoading) return;
+
+      saveDinnerForm();
+
+      const ai = window.Kalender?.dinnerAI;
+      if (!ai) {
+        setDinnerStatus("AIの準備ができていません。少し待ってからもう一度押してください。", true);
+        return;
+      }
+
+      const date = dateInput.value;
+      dinnerLoading = true;
+      dinnerButton.disabled = true;
+      dinnerButton.textContent = "🤖 考え中…";
+      setDinnerStatus("Geminiが献立を考えています（10秒ほど）…");
+
+      try {
+        const result = await ai.suggest(buildDinnerPrompt());
+        const suggestions = result.suggestions.map(cleanSuggestion).filter(s => s.name).slice(0, 3);
+
+        if (suggestions.length === 0) {
+          throw new Error("うまく提案を作れませんでした。もう一度試してください。");
+        }
+
+        saveJSON(dinnerLastStorageKey, { date, suggestions });
+        setDinnerStatus("");
+
+        // 考えている間に日付を変えていたら、その日に戻して見せる
+        if (dateInput.value !== date) {
+          dateInput.value = date;
+        }
+        render();
+      } catch (error) {
+        setDinnerStatus(error.message || "提案を作れませんでした。", true);
+      } finally {
+        dinnerLoading = false;
+        dinnerButton.disabled = false;
+        dinnerButton.textContent = "🤖 Geminiに考えてもらう";
+      }
+    });
+
+    // =========================================================
     // 画面全体の更新
     // =========================================================
     function render() {
@@ -2006,6 +2464,7 @@
       renderTimetable();
       renderAttendanceRates();
       renderMoney();
+      renderDinner();
     }
 
     function moveDate(days) {
@@ -2050,6 +2509,7 @@
       // この端末に「意味のある」記録があるか（初期状態の授業だけなら false）
       hasLocalData() {
         if (todos.length || events.length || habits.length || money.length) return true;
+      if (Object.keys(dinnerLog).length) return true;
         if (Object.keys(habitLog).length || monthlyBudget > 0) return true;
         if (Object.keys(getAllRecords()).length) return true;
         return JSON.stringify(lessons) !== JSON.stringify(defaultLessons);
@@ -2098,5 +2558,6 @@
 
   <!-- クラウド同期（firebase-config.js に設定があるときだけ動く） -->
   <script type="module" src="firebase-sync.js"></script>
+  <script type="module" src="dinner-ai.js"></script>
 </body>
 </html>
