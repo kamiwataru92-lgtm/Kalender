@@ -1,7 +1,7 @@
 // Kalender AI献立提案 API（Vercel のサーバーレス関数）
 //
-// ブラウザ → この関数 → Claude API の順に呼ばれる。
-// Claude の APIキーはこの関数の中（Vercel の環境変数）にだけ置き、ブラウザには出さない。
+// ブラウザ → この関数 → Gemini API の順に呼ばれる。
+// Gemini の APIキーはこの関数の中（Vercel の環境変数）にだけ置き、ブラウザには出さない。
 //
 // 守りの仕組み
 //   1. Firebase でログインした人だけが使える（IDトークンを検証する）
@@ -9,10 +9,10 @@
 //   3. 入力の長さと、AIの返答の長さに上限をつける
 //
 // Vercel の環境変数（設定方法は AI_SETUP.md）
-//   ANTHROPIC_API_KEY   Claude の APIキー（必須）
+//   GEMINI_API_KEY      Gemini の APIキー（必須）
 //   FIREBASE_PROJECT_ID Firebase のプロジェクトID（例：kalender-abab5）（必須）
 //   ALLOWED_ORIGIN      呼び出しを許すサイト（例：https://kamiwataru92-lgtm.github.io）
-//   ANTHROPIC_MODEL     使うモデル（省略時は claude-haiku-5-5）
+//   GEMINI_MODEL        使うモデル（省略時は gemini-3.8-flash）
 
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
@@ -116,7 +116,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     res.status(500).json({ error: "サーバーにAPIキーが設定されていません" });
     return;
@@ -124,31 +124,37 @@ export default async function handler(req, res) {
 
   const body = typeof req.body === "string" ? safeJSON(req.body) : (req.body || {});
   const input = { request: clean(body.request), dislikes: clean(body.dislikes) };
+  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL || "claude-haiku-5-5",
-        max_tokens: 600,
-        messages: [{ role: "user", content: buildPrompt(input) }]
-      })
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-goog-api-key": apiKey
+        },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: buildPrompt(input) }] }],
+          generationConfig: {
+            responseMimeType: "application/json", // JSONで返してもらう
+            maxOutputTokens: 2048
+          }
+        })
+      }
+    );
 
     if (!response.ok) {
-      console.error("Claude API error", response.status, await response.text());
+      console.error("Gemini API error", response.status, await response.text());
       res.status(502).json({ error: "AIに接続できませんでした。少し待ってからもう一度試してください" });
       return;
     }
 
     const data = await response.json();
-    const text = (data.content || [])
-      .filter(part => part.type === "text")
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const text = parts
+      .filter(part => typeof part.text === "string" && !part.thought)
       .map(part => part.text)
       .join("");
 

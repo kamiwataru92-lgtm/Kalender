@@ -1,4 +1,4 @@
-# 🍳 AI献立提案の設定（Claude API + Vercel）
+# 🍳 AI献立提案の設定（Gemini API + Vercel）
 
 「生活」タブに、気分や苦手な食べ物を入れるとAIが献立を3つ提案してくれる欄を追加します。
 所要時間は20分ほどです。設定するまでは、この欄は表示されません。
@@ -12,7 +12,7 @@
 api/menu.js（Vercel で動く小さなサーバー）
    │  APIキーはここだけに置く
    ▼
-Claude API
+Gemini API
 ```
 
 APIキーをブラウザ側のコードに書くと、誰でも見られて勝手に使われてしまいます。
@@ -20,26 +20,26 @@ APIキーをブラウザ側のコードに書くと、誰でも見られて勝�
 
 ---
 
-## 1. Claude の APIキーを作る
+## 1. Gemini の APIキーを作る
 
-1. <https://console.anthropic.com/> を開いてログイン
-2. 支払い方法を登録し、少額のクレジットを購入する
-   （Claude の月額プランとは別の、使った分だけの料金です）
-3. **利用額の上限（Spend limit）を低めに設定する**（使いすぎ防止）
-4. 「API Keys」でキーを作成してコピーする（`sk-ant-...` で始まる文字列）
+1. <https://aistudio.google.com/> を開いて Google アカウントでログイン
+2. 「Get API key」→「APIキーを作成」でキーを作ってコピーする
+3. 無料枠の範囲なら支払い設定は不要です
 
 > ⚠️ キーは GitHub やチャットに貼らないでください。次の Vercel の画面にだけ入れます。
+>
+> 無料枠では、送った内容が Google のサービス改善に使われます。気分や苦手な食べ物以外の個人的なことは入れないようにしましょう。
 
 ## 2. Vercel に api/menu.js を公開する
 
 1. <https://vercel.com/> を開き、「Continue with GitHub」でログイン
 2. 「Add New…」→「Project」→ このリポジトリ（Kalender）の「Import」
 3. 「Framework Preset」は **Other** のまま
-4. 「Environment Variables」に次の3つを追加
+4. 「Environment Variables」に次の3つを追加（使うモデルを変えたいときは `GEMINI_MODEL` も追加。省略時は `gemini-3.8-flash`）
 
 | Name | Value |
 | --- | --- |
-| `ANTHROPIC_API_KEY` | 手順1でコピーしたキー |
+| `GEMINI_API_KEY` | 手順1でコピーしたキー |
 | `FIREBASE_PROJECT_ID` | `kalender-abab5` |
 | `ALLOWED_ORIGIN` | `https://kamiwataru92-lgtm.github.io` |
 
@@ -73,7 +73,7 @@ export const aiEndpoint = "https://kalender-xxxx.vercel.app/api/menu";
 | 欄が出てこない | `ai-config.js` がまだ `null`。手順3をやり直す |
 | ログインしてから使ってください | ログインしていないか、`FIREBASE_PROJECT_ID` が違う |
 | このサイトからは使えません | `ALLOWED_ORIGIN` の綴りが違う（最後に `/` を付けない） |
-| サーバーにAPIキーが設定されていません | `ANTHROPIC_API_KEY` が未設定。設定後に Vercel で「Redeploy」 |
-| AIに接続できませんでした | キーが間違っているか、クレジットが足りない |
+| サーバーにAPIキーが設定されていません | `GEMINI_API_KEY` が未設定。設定後に Vercel で「Redeploy」 |
+| AIに接続できませんでした | キーが間違っている、無料枠の回数制限、またはモデル名が古い（Vercel の「Logs」にエラーの中身が出ます） |
 
 環境変数を変えたら、Vercel の「Deployments」から **Redeploy** すると反映されます。
