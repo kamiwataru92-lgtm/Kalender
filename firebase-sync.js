@@ -97,6 +97,10 @@ async function start() {
   const authInstance = auth.getAuth(app);
   authInstance.languageCode = "ja";
 
+  // AI献立提案（ai-menu.js）が「ログインした本人の証明」をもらうための窓口
+  K.isLoggedIn = () => Boolean(authInstance.currentUser);
+  K.getIdToken = async () => (authInstance.currentUser ? authInstance.currentUser.getIdToken() : null);
+
   // オフライン中の変更も IndexedDB に残し、つながったら送る
   let db;
   try {
@@ -148,6 +152,7 @@ async function start() {
       unsubscribe = null;
     }
     K.setCloudSaver(null);
+    window.dispatchEvent(new CustomEvent("kalender-auth", { detail: { loggedIn: Boolean(user) } }));
 
     if (!user) {
       setStatus("☁️ ログインするとスマホとPCで同期できます");

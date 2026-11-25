@@ -151,6 +151,25 @@
       display: none !important;
     }
 
+    /* ---- AI献立提案 ---- */
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .ai-menu-list {
+      margin: 12px 0 0;
+      padding-left: 22px;
+    }
+
+    .ai-menu-list li {
+      margin-bottom: 12px;
+    }
+
+    .ai-menu-list p {
+      margin: 4px 0;
+    }
+
     .empty {
       color: #687386;
       font-size: 14px;
@@ -738,6 +757,30 @@
           >
           <button class="primary" type="submit">追加</button>
         </form>
+      </section>
+
+      <!-- AI献立提案（ai-config.js に設定があるときだけ表示） -->
+      <section class="summary hidden" id="aiMenuBox">
+        <h2>🍳 ごはん提案（AI）</h2>
+        <form id="aiMenuForm">
+          <label for="aiMenuRequest">今日の気分・状況</label>
+          <input
+            id="aiMenuRequest"
+            type="text"
+            maxlength="200"
+            placeholder="例：筋トレ中、揚げ物が食べたい、300円以内"
+          >
+          <label for="aiMenuDislikes">苦手な食べ物（次回も覚えておきます）</label>
+          <input
+            id="aiMenuDislikes"
+            type="text"
+            maxlength="200"
+            placeholder="例：納豆、ピーマン"
+          >
+          <button class="primary" type="submit" id="aiMenuButton">提案してもらう</button>
+        </form>
+        <p class="muted hidden" id="aiMenuNote" style="margin-top:10px"></p>
+        <ol class="ai-menu-list" id="aiMenuList"></ol>
       </section>
     </div>
 
@@ -2098,5 +2141,8 @@
 
   <!-- クラウド同期（firebase-config.js に設定があるときだけ動く） -->
   <script type="module" src="firebase-sync.js"></script>
+
+  <!-- AI献立提案（ai-config.js に設定があるときだけ動く） -->
+  <script type="module" src="ai-menu.js"></script>
 </body>
 </html>
