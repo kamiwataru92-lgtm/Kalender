@@ -6,8 +6,8 @@
 // 画面は今までどおり localStorage のデータで動き、ログイン中だけ
 // 保存のたびにクラウドへ書き込み、ほかの端末の変更をリアルタイムで受け取る。
 
-import { loadFirebaseApp, SDK } from "./firebase-init.js";
-
+const FIREBASE_VERSION = "10.14.1";
+const SDK = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}`;
 const SYNCED_USER_KEY = "kalender-sync-uid-v1";
 
 const K = window.Kalender;
@@ -64,20 +64,31 @@ function askDirection() {
 async function start() {
   if (!K) return;
 
+  let firebaseConfig = null;
+  try {
+    ({ firebaseConfig } = await import("./firebase-config.js"));
+  } catch (error) {
+    console.info("firebase-config.js が読み込めないため、クラウド同期はオフです", error);
+    return;
+  }
+
+  if (!firebaseConfig) return; // 未設定：この端末だけで使う
+
+  syncBar.classList.remove("hidden");
+  setStatus("☁️ 読み込み中…");
+
   let app, auth, fs;
   try {
-    app = await loadFirebaseApp();
-    if (!app) return; // 未設定：この端末だけで使う
-
-    syncBar.classList.remove("hidden");
-    setStatus("☁️ 読み込み中…");
-
-    [auth, fs] = await Promise.all([
+    const [appMod, authMod, fsMod] = await Promise.all([
+      import(`${SDK}/firebase-app.js`),
       import(`${SDK}/firebase-auth.js`),
       import(`${SDK}/firebase-firestore.js`)
     ]);
+
+    app = appMod.initializeApp(firebaseConfig);
+    auth = authMod;
+    fs = fsMod;
   } catch (error) {
-    syncBar.classList.remove("hidden");
     console.error("Firebase を読み込めませんでした", error);
     setStatus("☁️ 同期を開始できませんでした（オフラインかも）");
     return;
@@ -85,6 +96,10 @@ async function start() {
 
   const authInstance = auth.getAuth(app);
   authInstance.languageCode = "ja";
+
+  // AI献立提案（ai-menu.js）が「ログインした本人の証明」をもらうための窓口
+  K.isLoggedIn = () => Boolean(authInstance.currentUser);
+  K.getIdToken = async () => (authInstance.currentUser ? authInstance.currentUser.getIdToken() : null);
 
   // オフライン中の変更も IndexedDB に残し、つながったら送る
   let db;
@@ -137,6 +152,7 @@ async function start() {
       unsubscribe = null;
     }
     K.setCloudSaver(null);
+    window.dispatchEvent(new CustomEvent("kalender-auth", { detail: { loggedIn: Boolean(user) } }));
 
     if (!user) {
       setStatus("☁️ ログインするとスマホとPCで同期できます");

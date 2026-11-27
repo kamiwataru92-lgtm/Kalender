@@ -1,0 +1,9 @@
+{
+  "name": "kalender",
+  "private": true,
+  "type": "module",
+  "description": "Kalender - 大学生のための生活管理アプリ（api/ は Vercel で動くAI献立提案のサーバー部分）",
+  "dependencies": {
+    "jose": "^6.2.18"
+  }
+}
