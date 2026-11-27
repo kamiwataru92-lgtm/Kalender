@@ -77,3 +77,14 @@ export const aiEndpoint = "https://kalender-xxxx.vercel.app/api/menu";
 | AIに接続できませんでした | キーが間違っている、無料枠の回数制限、またはモデル名が古い（Vercel の「Logs」にエラーの中身が出ます） |
 
 環境変数を変えたら、Vercel の「Deployments」から **Redeploy** すると反映されます。
+
+---
+
+## 🍎 Appleのカレンダー読み込み（api/calendar.js）
+
+予定タブの「Appleのカレンダー」は、同じ Vercel の `api/calendar.js` を使います。
+iCloud の公開カレンダーはブラウザから直接読めないため、このサーバーが代わりに読み込んで予定の一覧を返します。
+
+- **追加の設定は不要です。** `FIREBASE_PROJECT_ID` と `ALLOWED_ORIGIN` を AI献立提案と共通で使います
+- main にマージされると、Vercel が自動で公開し直します（自動で公開されない設定なら「Redeploy」）
+- 読みに行くのは iCloud（`*.icloud.com`）のリンクだけで、ログインした本人からの呼び出しだけを受け付けます
