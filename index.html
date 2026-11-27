@@ -599,6 +599,164 @@
       margin: 30px 0;
     }
 
+    /* ---- 電車 ---- */
+    .hint {
+      font-size: 12px;
+      margin: -6px 0 14px;
+      line-height: 1.6;
+    }
+
+    .train-card {
+      border: 1px solid #e3e8f8;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .train-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .train-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .train-title {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .train-name {
+      font-weight: bold;
+      font-size: 16px;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .train-line {
+      font-size: 12px;
+      color: #687386;
+      margin: 2px 0 0;
+      overflow-wrap: anywhere;
+    }
+
+    .day-type {
+      display: flex;
+      flex: none;
+      border: 1px solid #dce1eb;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .day-type button {
+      border: none;
+      border-radius: 0;
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+
+    .train-next {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin: 12px 0 4px;
+      flex-wrap: wrap;
+    }
+
+    .train-next-time {
+      font-size: 32px;
+      font-weight: bold;
+      color: #20283a;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+
+    .train-next-wait {
+      font-size: 15px;
+      font-weight: bold;
+      color: #3659d9;
+    }
+
+    .train-next-wait.soon {
+      color: #b42318;
+    }
+
+    .train-note {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: bold;
+      color: #b45309;
+      background: #fff4e5;
+      border-radius: 6px;
+      padding: 1px 5px;
+      margin-left: 2px;
+      vertical-align: middle;
+    }
+
+    .train-after {
+      font-size: 14px;
+      color: #687386;
+      margin: 0 0 6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .train-done {
+      font-size: 14px;
+      color: #687386;
+      margin: 12px 0 6px;
+    }
+
+    .train-card details {
+      margin: 6px 0 10px;
+    }
+
+    .train-card summary {
+      cursor: pointer;
+      color: #3659d9;
+      font-size: 13px;
+    }
+
+    .timetable-rows {
+      margin-top: 8px;
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timetable-row {
+      display: flex;
+      gap: 10px;
+      padding: 4px 0;
+      border-bottom: 1px solid #eef1f6;
+    }
+
+    .timetable-row .hour {
+      flex: none;
+      width: 2.2em;
+      text-align: right;
+      font-weight: bold;
+      color: #687386;
+    }
+
+    .timetable-row .mins {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+    }
+
+    .timetable-row .past {
+      color: #b8bfcc;
+    }
+
+    .timetable-row .next {
+      color: white;
+      background: #3659d9;
+      border-radius: 6px;
+      padding: 0 5px;
+      font-weight: bold;
+    }
+
     /* ---- 晩ごはん ---- */
     .field-label {
       display: block;
@@ -1011,6 +1169,61 @@
       </section>
     </div>
 
+    <!-- ===== 電車 ===== -->
+    <div class="tab-panel" data-tab="train">
+      <section class="summary">
+        <h2 id="trainHeading">🚃 次の電車</h2>
+        <div id="trainList"></div>
+      </section>
+
+      <section class="editor" id="trainEditor">
+        <h2 id="trainFormHeading">路線を追加</h2>
+
+        <form id="trainForm">
+          <label for="trainName">名前</label>
+          <input
+            id="trainName"
+            type="text"
+            maxlength="30"
+            placeholder="例：家→大学、大学→バイト先"
+            required
+          >
+
+          <label for="trainLine">路線・乗る駅・方面（任意）</label>
+          <input
+            id="trainLine"
+            type="text"
+            maxlength="60"
+            placeholder="例：JR中央線 三鷹駅 新宿方面"
+          >
+
+          <label for="trainWeekday">平日ダイヤ</label>
+          <textarea
+            id="trainWeekday"
+            rows="6"
+            placeholder="時刻表の見た目のままでOK&#10;6: 05 18 32 47&#10;7: 02 10快 21 35 50&#10;8: 04 15 28快 40"
+          ></textarea>
+
+          <label for="trainHoliday">土休日ダイヤ（任意・空なら平日と同じ）</label>
+          <textarea
+            id="trainHoliday"
+            rows="4"
+            placeholder="例：6:12, 6:40, 7:05快, 7:30"
+          ></textarea>
+
+          <p class="muted hint">
+            「7: 02 10快 21」のように時ごとに並べても、「7:02, 7:10」のように1本ずつ書いてもOK。
+            分のあとに「快」「急」などを付けると種別として表示します。0時台・1時台は終電として扱います。
+          </p>
+
+          <div class="buttons">
+            <button class="primary" type="submit" id="saveTrainButton">路線を追加</button>
+            <button type="button" id="cancelTrainEditButton" class="hidden">編集をキャンセル</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
     <!-- ===== 家計簿 ===== -->
     <div class="tab-panel" data-tab="money">
       <section class="summary">
@@ -1092,6 +1305,7 @@
   <nav class="tab-bar" id="tabBar">
     <button type="button" data-tab="life"><span class="tab-icon">🏠</span>生活</button>
     <button type="button" data-tab="events"><span class="tab-icon">📝</span>予定</button>
+    <button type="button" data-tab="train"><span class="tab-icon">🚃</span>電車</button>
     <button type="button" data-tab="classes"><span class="tab-icon">🎓</span>授業</button>
     <button type="button" data-tab="money"><span class="tab-icon">💴</span>家計簿</button>
   </nav>
@@ -1232,6 +1446,7 @@
     const moneyStorageKey = "kalender-money-v1";
     const budgetStorageKey = "kalender-budget-v1";
     const dinnerStorageKey = "kalender-dinner-v1";
+    const trainsStorageKey = "kalender-trains-v1";
 
     const defaultLessons = [
       { id: 1, name: "国際経済学", day: "", period: "" },
@@ -1249,10 +1464,11 @@
       habitLogStorageKey,
       moneyStorageKey,
       budgetStorageKey,
-      dinnerStorageKey
+      dinnerStorageKey,
+      trainsStorageKey
     ];
 
-    let lessons, events, todos, habits, habitLog, money, monthlyBudget, dinnerLog;
+    let lessons, events, todos, habits, habitLog, money, monthlyBudget, dinnerLog, trainRoutes;
 
     // localStorage から全データを読み直す
     function loadState() {
@@ -1274,6 +1490,8 @@
       monthlyBudget = Number(loadJSON(budgetStorageKey, 0)) || 0;
       dinnerLog = loadJSON(dinnerStorageKey, {}); // { "2026-11-18": { name, minutes, ... } }
       if (typeof dinnerLog !== "object" || Array.isArray(dinnerLog)) dinnerLog = {};
+      trainRoutes = loadJSON(trainsStorageKey, []); // [{ id, name, line, weekday: [...], holiday: [...] }]
+      if (!Array.isArray(trainRoutes)) trainRoutes = [];
 
       if (!Array.isArray(events)) events = [];
       if (!Array.isArray(todos)) todos = [];
@@ -1310,6 +1528,16 @@
         ["授業", `${dayLessons}コマ`, "classes"],
         ["支出", yen(daySpending), "money"]
       ];
+
+      // いちばん上の路線の次の電車（今日を見ているときだけ）
+      if (isToday && trainRoutes.length) {
+        const next = upcomingTrains(trainRoutes[0], 1).items[0];
+        chips.push([
+          "🚃 " + trainRoutes[0].name,
+          next ? `${formatTrainTime(next)}（${waitLabel(next.wait)}）` : "今日は終了",
+          "train"
+        ]);
+      }
 
       const root = document.getElementById("overviewChips");
       root.replaceChildren();
@@ -2136,6 +2364,459 @@
     });
 
     // =========================================================
+    // 電車
+    // =========================================================
+    const trainDayTypeStorageKey = "kalender-train-daytype-v1"; // 日付ごとのダイヤ切り替え（端末ごと）
+    const DAY_TYPES = { weekday: "平日", holiday: "土休日" };
+
+    // ---- 祝日（内閣府の決まりにそって計算） ----
+    const holidayCache = {};
+
+    function nthMonday(year, month, n) {
+      const firstDay = new Date(year, month - 1, 1).getDay();
+      return 1 + ((8 - firstDay) % 7) + (n - 1) * 7;
+    }
+
+    function holidaysOf(year) {
+      if (holidayCache[year]) return holidayCache[year];
+
+      const set = new Set();
+      const add = (month, day) =>
+        set.add(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
+
+      const shift = Math.floor((year - 1980) / 4);
+      const spring = Math.floor(20.8431 + 0.242194 * (year - 1980) - shift);
+      const autumn = Math.floor(23.2488 + 0.242194 * (year - 1980) - shift);
+
+      add(1, 1);                      // 元日
+      add(1, nthMonday(year, 1, 2));  // 成人の日
+      add(2, 11);                     // 建国記念の日
+      add(2, 23);                     // 天皇誕生日
+      add(3, spring);                 // 春分の日
+      add(4, 29);                     // 昭和の日
+      add(5, 3);                      // 憲法記念日
+      add(5, 4);                      // みどりの日
+      add(5, 5);                      // こどもの日
+      add(7, nthMonday(year, 7, 3));  // 海の日
+      add(8, 11);                     // 山の日
+      add(9, nthMonday(year, 9, 3));  // 敬老の日
+      add(9, autumn);                 // 秋分の日
+      add(10, nthMonday(year, 10, 2)); // スポーツの日
+      add(11, 3);                     // 文化の日
+      add(11, 23);                    // 勤労感謝の日
+
+      // 国民の休日（祝日にはさまれた平日）
+      [...set].forEach(date => {
+        const middle = addDays(date, 1);
+        if (!set.has(middle) && set.has(addDays(date, 2)) && parseDate(middle).getDay() !== 0) {
+          set.add(middle);
+        }
+      });
+
+      // 振替休日（祝日が日曜なら、次の祝日でない日）
+      [...set].sort().forEach(date => {
+        if (parseDate(date).getDay() !== 0) return;
+        let next = addDays(date, 1);
+        while (set.has(next)) next = addDays(next, 1);
+        set.add(next);
+      });
+
+      holidayCache[year] = set;
+      return set;
+    }
+
+    function isHoliday(dateString) {
+      return holidaysOf(Number(dateString.slice(0, 4))).has(dateString);
+    }
+
+    // 曜日と祝日から決まるダイヤ
+    function autoDayType(dateString) {
+      const day = parseDate(dateString).getDay();
+      return day === 0 || day === 6 || isHoliday(dateString) ? "holiday" : "weekday";
+    }
+
+    // 手動で切り替えていればそちらを優先
+    function dayTypeFor(dateString) {
+      const overrides = loadJSON(trainDayTypeStorageKey, {});
+      if (overrides && DAY_TYPES[overrides[dateString]]) return overrides[dateString];
+      return autoDayType(dateString);
+    }
+
+    function setDayType(dateString, type) {
+      const overrides = loadJSON(trainDayTypeStorageKey, {});
+      const map = overrides && typeof overrides === "object" ? overrides : {};
+
+      // 自動判定と同じなら上書きを消す
+      delete map[dateString];
+      if (autoDayType(dateString) !== type) map[dateString] = type;
+
+      // 古い日付の上書きは捨てる
+      const cutoff = addDays(localDateString(), -7);
+      Object.keys(map).forEach(date => {
+        if (date < cutoff) delete map[date];
+      });
+
+      saveJSON(trainDayTypeStorageKey, map);
+    }
+
+    // ---- 時刻表の読み取り ----
+    // 時刻は「その日の0時からの分」。0〜3時台は終電として 24〜27時 扱い。
+    function toServiceMinutes(hour, minute) {
+      return (hour < 4 ? hour + 24 : hour) * 60 + minute;
+    }
+
+    function parseTimetable(text) {
+      const found = new Map();
+
+      const push = (hour, minute, note) => {
+        if (!(hour >= 0 && hour <= 27 && minute >= 0 && minute < 60)) return;
+        const m = hour >= 24 ? hour * 60 + minute : toServiceMinutes(hour, minute);
+        const cleanNote = (note || "").replace(/[()（）[\]［］・.。,、]/g, "").trim().slice(0, 4);
+        found.set(`${m}|${cleanNote}`, { m, note: cleanNote });
+      };
+
+      String(text || "")
+        // 全角の数字・記号を半角に
+        .replace(/[０-９：]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+        .replace(/時/g, ":")
+        .replace(/分/g, "")
+        .split(/\r?\n/)
+        .forEach(rawLine => {
+          const line = rawLine.trim();
+          if (!line) return;
+
+          // 「7: 02 10快 21」「7 02 10 21」「7| 02 10」のような時刻表の形
+          const row = line.match(/^(\d{1,2})\s*[:|｜]?\s+(.+)$/);
+          if (row) {
+            const tokens = row[2].split(/[\s,、]+/).filter(Boolean);
+            if (tokens.length && tokens.every(t => /^\d{1,2}[^\d:]*$/.test(t))) {
+              tokens.forEach(t => {
+                const [, minute, note] = t.match(/^(\d{1,2})(.*)$/);
+                push(Number(row[1]), Number(minute), note);
+              });
+              return;
+            }
+          }
+
+          // 「7:02, 7:10快」のような1本ずつの形
+          for (const match of line.matchAll(/(\d{1,2}):(\d{2})([^\d\s,、:]*)/g)) {
+            push(Number(match[1]), Number(match[2]), match[3]);
+          }
+        });
+
+      return [...found.values()].sort((a, b) => a.m - b.m || a.note.localeCompare(b.note));
+    }
+
+    // 編集用に、時刻表の形のテキストへ戻す
+    function timetableToText(times) {
+      const byHour = new Map();
+      (times || []).forEach(t => {
+        const hour = Math.floor(t.m / 60);
+        if (!byHour.has(hour)) byHour.set(hour, []);
+        byHour.get(hour).push(String(t.m % 60).padStart(2, "0") + (t.note || ""));
+      });
+      return [...byHour.entries()].map(([hour, mins]) => `${hour % 24}: ${mins.join(" ")}`).join("\n");
+    }
+
+    function formatTrainTime(t) {
+      const hour = Math.floor(t.m / 60) % 24;
+      return `${hour}:${String(t.m % 60).padStart(2, "0")}`;
+    }
+
+    function waitLabel(wait) {
+      if (wait <= 0) return "まもなく";
+      if (wait < 60) return `あと${wait}分`;
+      return `あと${Math.floor(wait / 60)}時間${wait % 60 ? (wait % 60) + "分" : ""}`;
+    }
+
+    function timesFor(route, type) {
+      const holidayTimes = Array.isArray(route.holiday) ? route.holiday : [];
+      const weekdayTimes = Array.isArray(route.weekday) ? route.weekday : [];
+      if (type === "holiday" && holidayTimes.length) return holidayTimes;
+      return weekdayTimes;
+    }
+
+    // いまの「運行日」（0〜3時台は前の日のダイヤ）
+    function serviceNow() {
+      const now = new Date();
+      let date = localDateString(now);
+      let minutes = now.getHours() * 60 + now.getMinutes();
+      if (now.getHours() < 4) {
+        date = addDays(date, -1);
+        minutes += 24 * 60;
+      }
+      return { date, minutes };
+    }
+
+    function upcomingTrains(route, count = 3) {
+      const { date, minutes } = serviceNow();
+      const items = timesFor(route, dayTypeFor(date))
+        .filter(t => t.m >= minutes)
+        .slice(0, count)
+        .map(t => ({ ...t, wait: t.m - minutes }));
+
+      const tomorrow = addDays(date, 1);
+      const first = timesFor(route, dayTypeFor(tomorrow))[0] || null;
+
+      return { date, minutes, items, first };
+    }
+
+    // ---- 表示 ----
+    const openTimetables = new Set(); // 開いている時刻表（再描画しても閉じないように）
+
+    function trainTimeEl(t, className) {
+      const span = makeEl("span", className || "", formatTrainTime(t));
+      if (t.note) span.appendChild(makeEl("span", "train-note", t.note));
+      return span;
+    }
+
+    function renderTrains() {
+      const root = document.getElementById("trainList");
+      root.replaceChildren();
+
+      const selected = dateInput.value;
+      const service = serviceNow();
+      const showLive = selected === localDateString() || selected === service.date;
+      const viewDate = showLive ? service.date : selected;
+      const type = dayTypeFor(viewDate);
+
+      document.getElementById("trainHeading").textContent = showLive
+        ? "🚃 次の電車"
+        : `🚃 ${formatDateLabel(viewDate)}のダイヤ`;
+
+      if (trainRoutes.length === 0) {
+        root.appendChild(makeEl("p", "empty", "下のフォームから、よく乗る区間と時刻表を登録しよう。"));
+        return;
+      }
+
+      trainRoutes.forEach((route, index) => {
+        const card = makeEl("div", "train-card");
+
+        // 名前とダイヤ切り替え
+        const top = makeEl("div", "train-top");
+        const title = makeEl("div", "train-title");
+        title.appendChild(makeEl("p", "train-name", route.name));
+        if (route.line) title.appendChild(makeEl("p", "train-line", route.line));
+
+        const switcher = makeEl("div", "day-type");
+        Object.entries(DAY_TYPES).forEach(([value, label]) => {
+          const button = makeEl("button", value === type ? "selected" : "", label);
+          button.type = "button";
+          button.setAttribute("aria-pressed", String(value === type));
+          button.addEventListener("click", () => {
+            setDayType(viewDate, value);
+            render();
+          });
+          switcher.appendChild(button);
+        });
+
+        top.append(title, switcher);
+        card.appendChild(top);
+
+        const times = timesFor(route, type);
+        let nextMinute = null;
+
+        if (showLive) {
+          const { items, first } = upcomingTrains(route, 3);
+
+          if (items.length) {
+            nextMinute = items[0].m;
+            const next = makeEl("div", "train-next");
+            next.append(
+              trainTimeEl(items[0], "train-next-time"),
+              makeEl("span", "train-next-wait" + (items[0].wait <= 3 ? " soon" : ""), waitLabel(items[0].wait))
+            );
+            card.appendChild(next);
+
+            if (items.length > 1) {
+              const after = makeEl("p", "train-after", "その次 ");
+              items.slice(1).forEach((t, i) => {
+                if (i) after.appendChild(document.createTextNode("　"));
+                after.append(trainTimeEl(t), document.createTextNode(`（${waitLabel(t.wait).replace("あと", "")}）`));
+              });
+              card.appendChild(after);
+            }
+          } else if (times.length) {
+            const done = makeEl("p", "train-done", "今日の電車は終わりました。");
+            if (first) {
+              done.append(document.createTextNode("明日の始発 "), trainTimeEl(first));
+            }
+            card.appendChild(done);
+          } else {
+            card.appendChild(makeEl("p", "train-done", "時刻が登録されていません。「編集」から追加してください。"));
+          }
+        } else {
+          card.appendChild(
+            makeEl("p", "train-done", `${DAY_TYPES[type]}ダイヤ・全${times.length}本`)
+          );
+        }
+
+        // 時刻表
+        if (times.length) {
+          const details = document.createElement("details");
+          details.open = openTimetables.has(route.id);
+          details.addEventListener("toggle", () => {
+            if (details.open) openTimetables.add(route.id);
+            else openTimetables.delete(route.id);
+          });
+          details.appendChild(makeEl("summary", "", `${DAY_TYPES[type]}の時刻表を見る`));
+
+          const rows = makeEl("div", "timetable-rows");
+          const byHour = new Map();
+          times.forEach(t => {
+            const hour = Math.floor(t.m / 60);
+            if (!byHour.has(hour)) byHour.set(hour, []);
+            byHour.get(hour).push(t);
+          });
+
+          byHour.forEach((list, hour) => {
+            const row = makeEl("div", "timetable-row");
+            row.appendChild(makeEl("span", "hour", String(hour % 24)));
+            const mins = makeEl("span", "mins");
+            list.forEach(t => {
+              let className = "";
+              if (showLive && t.m === nextMinute) className = "next";
+              else if (showLive && t.m < service.minutes) className = "past";
+              const el = makeEl("span", className, String(t.m % 60).padStart(2, "0"));
+              if (t.note) el.appendChild(makeEl("span", "train-note", t.note));
+              mins.appendChild(el);
+            });
+            row.appendChild(mins);
+            rows.appendChild(row);
+          });
+
+          details.appendChild(rows);
+          card.appendChild(details);
+        }
+
+        // 操作ボタン
+        const buttons = makeEl("div", "buttons");
+
+        if (index > 0) {
+          const up = makeEl("button", "small", "⬆ 上へ");
+          up.type = "button";
+          up.addEventListener("click", () => {
+            [trainRoutes[index - 1], trainRoutes[index]] = [trainRoutes[index], trainRoutes[index - 1]];
+            saveTrains();
+            render();
+          });
+          buttons.appendChild(up);
+        }
+
+        const edit = makeEl("button", "small", "編集");
+        edit.type = "button";
+        edit.addEventListener("click", () => startEditingTrain(route));
+
+        const remove = makeEl("button", "small danger", "削除");
+        remove.type = "button";
+        remove.addEventListener("click", () => {
+          if (!confirm(`「${route.name}」を削除しますか？`)) return;
+          trainRoutes = trainRoutes.filter(r => r.id !== route.id);
+          saveTrains();
+          if (editingTrainId === route.id) resetTrainForm();
+          render();
+        });
+
+        buttons.append(edit, remove);
+        card.appendChild(buttons);
+        root.appendChild(card);
+      });
+    }
+
+    // ---- 追加・編集 ----
+    const trainForm = document.getElementById("trainForm");
+    const trainNameInput = document.getElementById("trainName");
+    const trainLineInput = document.getElementById("trainLine");
+    const trainWeekdayInput = document.getElementById("trainWeekday");
+    const trainHolidayInput = document.getElementById("trainHoliday");
+    const trainFormHeading = document.getElementById("trainFormHeading");
+    const saveTrainButton = document.getElementById("saveTrainButton");
+    const cancelTrainEditButton = document.getElementById("cancelTrainEditButton");
+
+    let editingTrainId = null;
+
+    function saveTrains() {
+      saveJSON(trainsStorageKey, trainRoutes);
+    }
+
+    function resetTrainForm() {
+      editingTrainId = null;
+      trainForm.reset();
+      trainFormHeading.textContent = "路線を追加";
+      saveTrainButton.textContent = "路線を追加";
+      cancelTrainEditButton.classList.add("hidden");
+    }
+
+    function startEditingTrain(route) {
+      editingTrainId = route.id;
+      trainNameInput.value = route.name;
+      trainLineInput.value = route.line || "";
+      trainWeekdayInput.value = timetableToText(route.weekday);
+      trainHolidayInput.value = timetableToText(route.holiday);
+
+      trainFormHeading.textContent = "路線を編集";
+      saveTrainButton.textContent = "変更を保存";
+      cancelTrainEditButton.classList.remove("hidden");
+
+      document.getElementById("trainEditor").scrollIntoView({ behavior: "smooth", block: "start" });
+      trainNameInput.focus();
+    }
+
+    trainForm.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const name = trainNameInput.value.trim();
+      const weekday = parseTimetable(trainWeekdayInput.value);
+      const holiday = parseTimetable(trainHolidayInput.value);
+
+      if (!name) {
+        alert("名前を入力してください。");
+        return;
+      }
+
+      if (weekday.length === 0 && holiday.length === 0) {
+        alert("時刻を読み取れませんでした。\n「7: 02 15 31」や「7:02, 7:15」の形で入力してください。");
+        return;
+      }
+
+      const data = {
+        name,
+        line: trainLineInput.value.trim(),
+        // 平日が空で土休日だけ入っているときは、土休日を平日にも使う
+        weekday: weekday.length ? weekday : holiday,
+        holiday: weekday.length ? holiday : []
+      };
+
+      if (editingTrainId !== null) {
+        trainRoutes = trainRoutes.map(r => (r.id === editingTrainId ? { ...r, ...data } : r));
+      } else {
+        trainRoutes.push({ id: nextId(trainRoutes), ...data });
+      }
+
+      saveTrains();
+      resetTrainForm();
+      render();
+      document.getElementById("trainList").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    cancelTrainEditButton.addEventListener("click", resetTrainForm);
+
+    // 「あと○分」を自動で進める
+    setInterval(() => {
+      if (trainRoutes.length && document.visibilityState === "visible") {
+        renderTrains();
+        renderOverview();
+      }
+    }, 20000);
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && trainRoutes.length) {
+        renderTrains();
+        renderOverview();
+      }
+    });
+
+    // =========================================================
     // 晩ごはん（Gemini）
     // =========================================================
     const dinnerFormStorageKey = "kalender-dinner-form-v1"; // 入力内容（端末ごと）
@@ -2465,6 +3146,7 @@
       renderAttendanceRates();
       renderMoney();
       renderDinner();
+      renderTrains();
     }
 
     function moveDate(days) {
@@ -2509,7 +3191,7 @@
       // この端末に「意味のある」記録があるか（初期状態の授業だけなら false）
       hasLocalData() {
         if (todos.length || events.length || habits.length || money.length) return true;
-      if (Object.keys(dinnerLog).length) return true;
+      if (Object.keys(dinnerLog).length || trainRoutes.length) return true;
         if (Object.keys(habitLog).length || monthlyBudget > 0) return true;
         if (Object.keys(getAllRecords()).length) return true;
         return JSON.stringify(lessons) !== JSON.stringify(defaultLessons);
